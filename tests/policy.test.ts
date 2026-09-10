@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PolicyGuard, PolicyViolation } from "../src/policy/policy.ts";
-import { redactDeep, redactText } from "../src/policy/redact.ts";
+import { redactDeep, redactPiiField, redactText } from "../src/policy/redact.ts";
 
 const policy = new PolicyGuard({
   allowedHosts: ["127.0.0.1", "localhost"],
@@ -29,11 +29,14 @@ describe("policy guard", () => {
     expect(() => policy.assertAction({ name: "click" })).not.toThrow();
   });
 
-  it("marks irreversible names as risky", () => {
+  it("marks irreversible names as risky by exact match only", () => {
     expect(policy.riskFor({ name: "click", target: { primary: { by: "role", role: "button", name: "Confirm" } } })).toBe(
       "risky",
     );
     expect(policy.riskFor({ name: "click", target: { primary: { by: "role", role: "button", name: "Search" } } })).toBe(
+      "safe",
+    );
+    expect(policy.riskFor({ name: "click", target: { primary: { by: "role", role: "button", name: "Submit search" } } })).toBe(
       "safe",
     );
     expect(
@@ -53,5 +56,14 @@ describe("redaction", () => {
       password: "[REDACTED]",
       note: "ok",
     });
+  });
+
+  it("names the regex misses: Jane Doe and $4,250.00", () => {
+    expect(redactText("Jane Doe holds $4,250.00")).toBe("Jane Doe holds $4,250.00");
+  });
+
+  it("keeps the money contract visible when redacting PII", () => {
+    expect(redactPiiField({ currency: "USD", minor: 425000 })).toEqual({ currency: "USD", minor: "[REDACTED]" });
+    expect(redactPiiField("Jane Doe")).toBe("[REDACTED-PII]");
   });
 });

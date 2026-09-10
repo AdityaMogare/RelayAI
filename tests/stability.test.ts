@@ -2,10 +2,10 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { LOOKUP_MEMBER_SAVINGS } from "../src/artifact/compile.ts";
+import { LOOKUP_MEMBER_SAVINGS } from "./fixtures.ts";
 import { EvidenceStore } from "../src/evidence/store.ts";
 import { ReplayEngine } from "../src/replay/engine.ts";
-import { runStability } from "../src/replay/stability.ts";
+import { percentile, runStability } from "../src/replay/stability.ts";
 import { MockSurface } from "../src/surfaces/mock.ts";
 
 describe("replay stability", () => {
@@ -21,6 +21,15 @@ describe("replay stability", () => {
     expect(report.success).toBe(3);
     expect(report.failed).toBe(0);
     expect(report.rate).toBe(1);
+    expect(report.fallbackRate).toBe(0);
+    expect(report.p50DurationMs).toBeGreaterThanOrEqual(0);
+    expect(report.p95DurationMs).toBeGreaterThanOrEqual(report.p50DurationMs);
+    expect(report.durationsMs).toHaveLength(3);
+  });
+
+  it("computes inclusive percentiles", () => {
+    expect(percentile([10, 20, 30, 40, 50], 50)).toBe(30);
+    expect(percentile([10, 20, 30, 40, 50], 95)).toBe(50);
   });
 
   it("counts locator misses as failed runs", async () => {
