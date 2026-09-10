@@ -1,0 +1,13 @@
+# Ops levers. Edit this file to disable a tenant or capability — no deploy.
+# Evidence screenshots and run dumps expire after retention.ttlDays days.
+
+disabled:
+  capabilities: []
+  tenants: []
+
+blastRadius:
+  maxInvocationsPerCapabilityPerHour: 30
+  maxInvocationsPerTenantPerHour: 120
+
+retention:
+  ttlDays: 14

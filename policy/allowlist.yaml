@@ -1,4 +1,5 @@
-# Hosts the agent and replay engine may touch.
+# Hosts the agent and replay engine may touch. Necessary, not sufficient.
+# A shared browser can still open /admin/wire on an allowlisted host.
 allowedHosts:
   - 127.0.0.1
   - localhost
@@ -13,10 +14,40 @@ allowedActions:
   - dismiss
   - wait
 
-# Names that mark a click as irreversible / high-impact.
+# Default deny. Method + path glob. Could this agent reach /admin/wire? No.
+allowedRoutes:
+  - { method: GET, path: "/" }
+  - { method: GET, path: "/index.html" }
+  - { method: GET, path: "/ticker" }
+  - { method: GET, path: "/login" }
+  - { method: POST, path: "/login" }
+  - { method: GET, path: "/logout" }
+  - { method: GET, path: "/frames" }
+  - { method: GET, path: "/frames/**" }
+  - { method: GET, path: "/legacy" }
+  - { method: GET, path: "/legacy/**" }
+  - { method: GET, path: "/search" }
+  - { method: GET, path: "/member/*" }
+  - { method: GET, path: "/member/*/sub-account" }
+  - { method: POST, path: "/member/*/sub-account/confirm" }
+  - { method: GET, path: "/member/*/sub-account/confirm" }
+  - { method: GET, path: "/member/*/disputes" }
+  - { method: GET, path: "/member/*/disputes/open" }
+  - { method: GET, path: "/member/*/disputes/*" }
+  - { method: GET, path: "/member/*/disputes/*/file" }
+  - { method: POST, path: "/member/*/disputes/*/submit" }
+  - { method: GET, path: "/member/*/disputes/*/receipt" }
+  - { method: GET, path: "/member/*/disputes/*/submit" }
+
+# Denied wins. POST /admin/* never.
+deniedRoutes:
+  - { method: "*", path: "/admin" }
+  - { method: "*", path: "/admin/**" }
+
+# Advisory names for discovery *proposal* only (exact control name).
+# Replay trusts step.risk on the artifact. "submit" is not a token match —
+# otherwise "Submit search" would be treated as irreversible.
 riskyNames:
   - confirm
   - delete
-  - submit
   - approve
-  - open sub-account
