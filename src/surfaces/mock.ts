@@ -1,5 +1,6 @@
 import type { Surface } from "../core/surface.ts";
 import type { Action, ActionResult, ControlOwner, Locator, Observation } from "../core/types.ts";
+import { locatorChain, locatorName } from "../replay/locator.ts";
 
 export type MockPage =
   | "search"
@@ -8,10 +9,13 @@ export type MockPage =
   | "notfound"
   | "denied"
   | "expired"
+  | "wrong"
+  | "unavailable"
   | "confirm"
   | "opened"
   | "disputes"
   | "disputeDetail"
+  | "disputeEmptyAmount"
   | "disputeNotFound"
   | "disputeAlreadyFiled"
   | "disputeForm"
@@ -25,10 +29,26 @@ export class MockSurface implements Surface {
   disputeId = "";
   reason = "";
   private owner: ControlOwner = "automation";
+  private readonly id = "mock-session";
   failNextLocator = false;
+  /** Skip rank-1 and match the first fallback — used to prove drift detection. */
+  skipPrimary = false;
+  /** Fail the first action whose resolved name matches (case-insensitive). */
+  failWhenName?: string;
+  /** Dismiss does not clear the interstitial — recoverable budget exhausts. */
+  stickyNotice = false;
+  /** Navigate/search returns HTTP 503 this many times before succeeding. */
+  failTransientTimes = 0;
+  /** CU-West style copy remaps on the fake UI (Search → Find Member). */
+  labels: Record<string, string>;
 
-  constructor(start: MockPage = "search") {
+  constructor(start: MockPage = "search", labels: Record<string, string> = {}) {
     this.page = start;
+    this.labels = labels;
+  }
+
+  sessionId(): string {
+    return this.id;
   }
 
   whoHasControl(): ControlOwner {
@@ -51,72 +71,128 @@ export class MockSurface implements Surface {
     if (this.owner !== "automation") {
       return { ok: false, error: "Automation does not have control of the session." };
     }
+    return this.perform(action);
+  }
+
+  async actAsHuman(action: Action): Promise<ActionResult> {
+    if (this.owner !== "human") {
+      return { ok: false, error: "Human does not have control of the session." };
+    }
+    return this.perform(action);
+  }
+
+  private async perform(action: Action): Promise<ActionResult> {
     if (this.failNextLocator) {
       this.failNextLocator = false;
       return { ok: false, error: "No locator matched" };
     }
     if (action.name === "navigate") {
-      this.page = action.url?.includes("expired") ? "expired" : "search";
+      if (this.failTransientTimes > 0) {
+        this.failTransientTimes -= 1;
+        this.page = "unavailable";
+        return { ok: false, error: "HTTP 503", retryable: true };
+      }
+      if (action.url?.includes("expired")) this.page = "expired";
+      else if (action.url?.includes("wrong")) this.page = "wrong";
+      else if (action.url?.includes("flaky") || action.url?.includes("unavailable")) this.page = "unavailable";
+      else this.page = action.url?.includes("notice=always") || this.stickyNotice ? "notice" : "search";
       return { ok: true };
     }
     if (action.name === "wait") return { ok: true };
-    if (action.name === "dismiss") {
-      if (this.page === "notice") this.page = "search";
-      return { ok: true, usedLocator: { by: "role", role: "button", name: "Dismiss" } };
+
+    const used = this.resolveLocator(action);
+    const name = this.canonical(locatorName(used ?? action.target?.primary ?? { by: "role" }));
+    if (this.failWhenName && name === this.failWhenName.toLowerCase()) {
+      this.failWhenName = undefined;
+      return { ok: false, error: "No locator matched" };
     }
 
-    const name = action.target?.primary.name ?? "";
-    if (action.name === "type" && this.matches(action.target?.primary, "Member ID")) {
+    if (action.name === "dismiss") {
+      if (this.page === "notice" && !this.stickyNotice) this.page = "search";
+      return { ok: true, usedLocator: used ?? { by: "role", role: "button", name: "Dismiss" } };
+    }
+
+    if (action.target && !used) {
+      return { ok: false, error: "No locator matched" };
+    }
+
+    if (action.name === "type" && name === "member id") {
       this.memberId = action.value ?? "";
-      return { ok: true, usedLocator: action.target?.primary };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "type" && this.matches(action.target?.primary, "Dispute ID")) {
+    if (action.name === "type" && name === "dispute id") {
       this.disputeId = action.value ?? "";
-      return { ok: true, usedLocator: action.target?.primary };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "select" && this.matches(action.target?.primary, "Product")) {
+    if (action.name === "select" && name === "product") {
       this.product = action.value ?? "";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "select" && this.matches(action.target?.primary, "Reason")) {
+    if (action.name === "select" && name === "reason") {
       this.reason = action.value ?? "";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && this.matches(action.target?.primary, "Search")) {
+    if (action.name === "click" && (name === "search" || name.startsWith("search"))) {
+      if (this.failTransientTimes > 0) {
+        this.failTransientTimes -= 1;
+        this.page = "unavailable";
+        return { ok: false, error: "HTTP 503", retryable: true };
+      }
+      const q = this.memberId.trim().toLowerCase();
       if (this.memberId === "99999") this.page = "notfound";
       else if (this.memberId === "55555") this.page = "denied";
       else if (this.memberId === "00000") this.page = "expired";
-      else this.page = "detail";
-      return { ok: true, usedLocator: action.target?.primary };
+      else if (q === "jane doe" || this.memberId === "12345" || !this.memberId) this.page = "detail";
+      else this.page = "notfound";
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && name.toLowerCase().includes("open sub-account")) {
+    if (action.name === "click" && name.includes("open sub-account")) {
       this.page = "confirm";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && this.matches(action.target?.primary, "Disputes")) {
+    if (action.name === "click" && (name === "disputes" || name === "card disputes")) {
       this.page = "disputes";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && this.matches(action.target?.primary, "Open")) {
-      if (this.disputeId === "DSP-9999") this.page = "disputeNotFound";
-      else if (this.disputeId === "DSP-1002") this.page = "disputeAlreadyFiled";
+    if (action.name === "click" && (name === "open" || name === "open row" || name === "details" || used?.by === "cellInRow")) {
+      const scoped =
+        action.target?.primary.scope?.by === "row" ? action.target.primary.scope.hasText : [];
+      const scope = [
+        ...scoped,
+        action.target?.primary.row?.matches ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      const fromScope = scope.toUpperCase().match(/DSP-\d+/)?.[0];
+      if (fromScope) this.disputeId = fromScope;
+      const row = {
+        headers: ["ID", "Merchant", "Card", "Amount", "Status", ""],
+        cells: ["DSP-1001", "ACME POS", "4412", "$42.18", "open", "Open"],
+      };
+      if (this.disputeId === "DSP-9999" || /no-such|unknown/.test(scope)) {
+        return { ok: false, error: "No locator matched for click" };
+      }
+      if (this.disputeId === "DSP-1002" || /northside/.test(scope)) this.page = "disputeAlreadyFiled";
+      else if (this.disputeId === "DSP-1003" || /mainframe/.test(scope)) this.page = "disputeEmptyAmount";
       else this.page = "disputeDetail";
-      return { ok: true };
+      if (/northside/.test(scope)) row.cells = ["DSP-1002", "NORTHSIDE FUEL", "4412", "$61.02", "filed", "Open"];
+      if (/mainframe/.test(scope)) row.cells = ["DSP-1003", "MAINFRAME TIMEOUT", "4412", "", "open", "Open"];
+      return { ok: true, usedLocator: used, row };
     }
-    if (action.name === "click" && this.matches(action.target?.primary, "File Dispute")) {
+    if (action.name === "click" && name.includes("file dispute")) {
       this.page = "disputeForm";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && name.toLowerCase() === "continue") {
+    if (action.name === "click" && (name === "continue" || name.startsWith("continue"))) {
       if (this.page === "disputeForm") this.page = "disputeReview";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
-    if (action.name === "click" && name.toLowerCase() === "confirm") {
+    if (action.name === "click" && (name === "confirm" || name.startsWith("confirm") || name === this.label("Confirm").toLowerCase())) {
       this.page = this.page === "disputeReview" ? "disputeFiled" : "opened";
-      return { ok: true };
+      return { ok: true, usedLocator: used };
     }
     if (action.name === "extract") {
-      return this.extract(action);
+      return this.extract(action, used);
     }
     return { ok: false, error: `Unhandled mock action ${action.name} ${name}` };
   }
@@ -127,40 +203,75 @@ export class MockSurface implements Surface {
 
   async close(): Promise<void> {}
 
-  private extract(action: Action): ActionResult {
-    const locName = (action.target?.primary.name ?? "").toLowerCase();
+  private extract(action: Action, used?: Locator): ActionResult {
+    const locName = locatorName(used ?? action.target?.primary ?? { by: "role" }).toLowerCase();
+    const hit = used ?? action.target?.primary;
     if (this.page === "opened") {
       return {
         ok: true,
         extracted: "Confirmation: Share Savings is now open",
-        usedLocator: action.target?.primary,
+        usedLocator: hit,
       };
     }
     if (this.page === "disputeFiled") {
       return {
         ok: true,
         extracted: "Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.",
-        usedLocator: action.target?.primary,
+        usedLocator: hit,
       };
+    }
+    if (this.page === "disputeEmptyAmount") {
+      return { ok: true, extracted: "", usedLocator: action.target?.primary };
     }
     if (this.page === "disputeDetail" || this.page === "disputeAlreadyFiled") {
       if (locName.includes("merchant")) {
-        return { ok: true, extracted: "ACME POS", usedLocator: action.target?.primary };
+        return { ok: true, extracted: "ACME POS", usedLocator: hit };
       }
       if (locName.includes("amount")) {
-        return { ok: true, extracted: "$42.18", usedLocator: action.target?.primary };
+        return { ok: true, extracted: "$42.18", usedLocator: hit };
       }
-      return { ok: true, extracted: "$42.18", usedLocator: action.target?.primary };
+      return { ok: true, extracted: "$42.18", usedLocator: hit };
     }
     if (this.page === "detail") {
-      return { ok: true, extracted: "$4,250.00", usedLocator: action.target?.primary };
+      return { ok: true, extracted: "$4,250.00", usedLocator: hit };
     }
     return { ok: false, error: "Extract target not visible" };
   }
 
-  private matches(locator: Locator | undefined, name: string): boolean {
-    if (!locator) return false;
-    return (locator.name ?? locator.text ?? "").toLowerCase() === name.toLowerCase();
+  private label(name: string): string {
+    return this.labels[name] ?? name;
+  }
+
+  private canonical(displayed: string): string {
+    const lower = displayed.toLowerCase();
+    for (const [from, to] of Object.entries(this.labels)) {
+      if (to.toLowerCase() === lower) return from.toLowerCase();
+    }
+    return lower;
+  }
+
+  private resolveLocator(action: Action): Locator | undefined {
+    if (!action.target) return undefined;
+    const chain = locatorChain(action.target);
+    const start = this.skipPrimary ? 1 : 0;
+    const relabelled = Object.keys(this.labels).length > 0;
+    for (const locator of chain.slice(start)) {
+      const want = locatorName(locator);
+      if (!want) continue;
+      if (!relabelled) return locator;
+      if (this.locatorVisible(locator)) return locator;
+    }
+    return undefined;
+  }
+
+  private locatorVisible(locator: Locator): boolean {
+    const want = locatorName(locator);
+    if (!want) return false;
+    const snap = this.snapshot();
+    if (locator.by === "text" || locator.by === "css") {
+      return `${snap.aria}\n${snap.text}`.toLowerCase().includes(want.toLowerCase());
+    }
+    return snap.aria.includes(`"${want}"`);
   }
 
   private snapshot(): Observation {
@@ -204,13 +315,40 @@ export class MockSurface implements Surface {
         text: "Session expired Your teller session has timed out.",
       };
     }
+    if (this.page === "wrong") {
+      return {
+        ...base,
+        url: "http://127.0.0.1:3000/?wrong=1",
+        title: "Relay Credit Union — Wrong screen",
+        aria: '- alert "Wrong screen"',
+        text: "Wrong screen This is the teller training sandbox, not member servicing.",
+      };
+    }
+    if (this.page === "unavailable") {
+      return {
+        ...base,
+        url: "http://127.0.0.1:3000/?flaky=1",
+        title: "Relay Credit Union — Unavailable",
+        aria: '- alert "Core temporarily unavailable"',
+        text: "Core temporarily unavailable The servicing host returned HTTP 503.",
+      };
+    }
+    if (this.page === "disputeEmptyAmount") {
+      return {
+        ...base,
+        url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1003",
+        title: "Relay Credit Union — Dispute DSP-1003",
+        aria: '- heading "Dispute DSP-1003"\n- cell "Transaction Amount"',
+        text: "Dispute DSP-1003 Merchant ACME POS Transaction Amount File Dispute",
+      };
+    }
     if (this.page === "detail") {
       return {
         ...base,
         url: "http://127.0.0.1:3000/member/12345",
         title: "Relay Credit Union — Member 12345",
-        aria: '- heading "Member 12345"\n- cell "Savings Balance"\n- link "Disputes"',
-        text: "Member 12345 Name Jane Doe Savings Balance $4,250.00 Checking Balance $1,102.33 Disputes",
+        aria: `- heading "Member 12345"\n- cell "Savings Balance"\n- link "${this.label("Disputes")}"\n- link "Open Sub-Account"`,
+        text: `Member 12345 Name Jane Doe Savings Balance $4,250.00 Checking Balance $1,102.33 ${this.label("Disputes")}`,
       };
     }
     if (this.page === "disputes") {
@@ -218,8 +356,9 @@ export class MockSurface implements Surface {
         ...base,
         url: "http://127.0.0.1:3000/member/12345/disputes",
         title: "Relay Credit Union — Dispute Queue",
-        aria: '- heading "Dispute Queue"\n- textbox "Dispute ID"\n- button "Open"',
-        text: "Dispute Queue Member 12345 Dispute ID Open DSP-1001 ACME POS $42.18",
+        aria: `- heading "Dispute Queue"\n- link "${this.label("Open")}"\n- link "${this.label("Open")}"`,
+        text: `Dispute Queue Member 12345 ACME POS 4412 $42.18 NORTHSIDE FUEL 4412 ACME WHOLESALE 4412 ${this.label("Open")}`,
+        dialog: this.labels.attest ? "Supervisor Attestation" : undefined,
       };
     }
     if (this.page === "disputeNotFound") {
@@ -245,8 +384,10 @@ export class MockSurface implements Surface {
         ...base,
         url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001",
         title: "Relay Credit Union — Dispute DSP-1001",
-        aria: '- heading "Dispute DSP-1001"\n- cell "Transaction Amount"\n- link "File Dispute"',
-        text: "Dispute DSP-1001 Merchant ACME POS Transaction Amount $42.18 File Dispute",
+        aria: '- heading "Dispute DSP-1001"\n- cell "Transaction Amount"\n- link "' +
+          this.label("File Dispute") +
+          '"',
+        text: `Dispute DSP-1001 Merchant ACME POS Transaction Amount $42.18 ${this.label("File Dispute")}`,
       };
     }
     if (this.page === "disputeForm") {
@@ -254,7 +395,7 @@ export class MockSurface implements Surface {
         ...base,
         url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/file",
         title: "Relay Credit Union — File Card Dispute",
-        aria: '- heading "File Card Dispute"\n- combobox "Reason"\n- button "Continue"',
+        aria: `- heading "File Card Dispute"\n- combobox "Reason"\n- button "${this.label("Continue")}"`,
         text: "File Card Dispute Reason Continue",
       };
     }
@@ -263,14 +404,14 @@ export class MockSurface implements Surface {
         ...base,
         url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/file?step=review",
         title: "Relay Credit Union — Confirm Dispute Filing",
-        aria: '- heading "Confirm Dispute Filing"\n- button "Confirm"',
-        text: "Confirm Dispute Filing Filing DSP-1001 for $42.18. This action is irreversible once confirmed.",
+        aria: `- heading "Confirm Dispute Filing"\n- button "${this.label("Confirm")}"`,
+        text: `Confirm Dispute Filing Filing DSP-1001 for $42.18. This action is irreversible once confirmed. ${this.label("Confirm")}`,
       };
     }
     if (this.page === "disputeFiled") {
       return {
         ...base,
-        url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/submit",
+        url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/confirmation",
         title: "Relay Credit Union — Dispute filed",
         aria: '- status "Confirmation"',
         text: "Dispute filed Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.",
@@ -279,17 +420,26 @@ export class MockSurface implements Surface {
     if (this.page === "opened") {
       return {
         ...base,
-        url: "http://127.0.0.1:3000/member/12345/sub-account/confirm",
+        url: "http://127.0.0.1:3000/member/12345/sub-account/opened",
         title: "Relay Credit Union — Sub-account opened",
         aria: '- status "Confirmation"',
         text: "Sub-account opened Confirmation: Share Savings is now open for member 12345.",
       };
     }
+    if (this.page === "confirm") {
+      return {
+        ...base,
+        url: "http://127.0.0.1:3000/member/12345/sub-account?step=review",
+        title: "Relay Credit Union — Confirm sub-account",
+        aria: `- combobox "Product"\n- button "Continue"\n- button "${this.label("Confirm")}"`,
+        text: `Confirm opening a sub-account. Product Continue ${this.label("Confirm")}`,
+      };
+    }
     return {
       ...base,
       url: "http://127.0.0.1:3000/",
-      aria: '- textbox "Member ID"\n- button "Search"',
-      text: "Member Lookup Member ID Search",
+      aria: `- textbox "${this.label("Member ID")}"\n- button "${this.label("Search")}"`,
+        text: `${this.label("Member Lookup")} ${this.label("Member ID")} ${this.label("Search")}`,
     };
   }
 }

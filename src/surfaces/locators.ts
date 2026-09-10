@@ -1,4 +1,4 @@
-import type { Frame, Page } from "playwright";
+import type { Frame, Locator as PlaywrightLocator, Page } from "playwright";
 import type { Locator as LogicalLocator } from "../core/types.ts";
 
 export async function locateInFrames(page: Page, locator: LogicalLocator) {
@@ -10,8 +10,15 @@ export async function locateInFrames(page: Page, locator: LogicalLocator) {
 }
 
 async function locateInFrame(frame: Frame, locator: LogicalLocator) {
-  const handle = buildLocator(frame, locator);
   try {
+    if ((await frame.locator("frameset").count()) > 0) return null;
+    const root = scopedRoot(frame, locator);
+    if (locator.by === "cellInRow") {
+      const handle = await cellInRow(root, locator);
+      if (handle && (await handle.count()) > 0) return handle.first();
+      return null;
+    }
+    const handle = buildLocator(root, locator);
     if ((await handle.count()) > 0) return handle.first();
   } catch {
     return null;
@@ -19,21 +26,54 @@ async function locateInFrame(frame: Frame, locator: LogicalLocator) {
   return null;
 }
 
-function buildLocator(frame: Frame, locator: LogicalLocator) {
+/** Rows that do not wrap nested tables — skips chrome `tr`s that contain the whole work grid. */
+function leafRows(root: Frame | PlaywrightLocator): PlaywrightLocator {
+  return root.locator("tr:not(:has(table))");
+}
+
+function scopedRoot(frame: Frame, locator: LogicalLocator): Frame | PlaywrightLocator {
+  if (locator.scope?.by === "region") {
+    return frame.getByRole("group", { name: locator.scope.heading, exact: true });
+  }
+  if (locator.scope?.by === "row") {
+    let row = leafRows(frame);
+    for (const text of locator.scope.hasText) {
+      if (text) row = row.filter({ hasText: text });
+    }
+    return row;
+  }
+  return frame;
+}
+
+async function cellInRow(root: Frame | PlaywrightLocator, locator: LogicalLocator): Promise<PlaywrightLocator | null> {
+  const matches = locator.row?.matches ?? (locator.scope?.by === "row" ? locator.scope.hasText[0] : undefined);
+  const column = locator.cell ?? locator.name ?? "";
+  if (!matches || !column) return null;
+  const row = leafRows(root).filter({ hasText: matches });
+  const named = row.getByRole("link", { name: column, exact: true }).or(row.getByRole("button", { name: column, exact: true }));
+  if ((await named.count()) > 0) return named.first();
+  const table = row.locator("xpath=ancestor::table[1]");
+  const headers = (await table.locator("th").allInnerTexts()).map((h) => h.trim());
+  const idx = headers.findIndex((h) => h.toLowerCase() === column.toLowerCase());
+  if (idx >= 0) return row.locator("td").nth(idx);
+  return row.getByRole("cell", { name: column, exact: true });
+}
+
+function buildLocator(root: Frame | PlaywrightLocator, locator: LogicalLocator) {
   switch (locator.by) {
     case "role":
-      return frame.getByRole((locator.role ?? "generic") as Parameters<Frame["getByRole"]>[0], {
+      return root.getByRole((locator.role ?? "generic") as Parameters<Frame["getByRole"]>[0], {
         name: locator.name,
         exact: true,
       });
     case "label":
-      return frame.getByLabel(locator.name ?? "", { exact: false });
+      return root.getByLabel(locator.name ?? "", { exact: false });
     case "text":
-      return frame.getByText(locator.text ?? "", { exact: false });
+      return root.getByText(locator.text ?? "", { exact: false });
     case "css":
-      return frame.locator(locator.selector ?? "body");
+      return root.locator(locator.selector ?? "body");
     default:
-      return frame.locator("body");
+      return root.locator("body");
   }
 }
 

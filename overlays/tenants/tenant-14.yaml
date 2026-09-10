@@ -1,0 +1,16 @@
+# CU West — same Relay Core product, version 4.2.
+# Ops: if a button label changes, edit `copy`. Do not re-record the capability.
+# Confirm stays risky on the artifact; this file only changes the accessible name.
+
+kind: tenant
+id: tenant-14
+vendorId: relay-core
+notes: >
+  CU West rebranded Search → Find Member and Confirm → Submit Request in 4.2.
+  Same screens as tenant 9. Smallest fix for a renamed Confirm is the one line
+  below. Who: tenant ops, in this file.
+
+copy:
+  Search: Find Member
+  Member Lookup: Find a Member
+  Confirm: Submit Request

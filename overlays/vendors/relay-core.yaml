@@ -1,0 +1,13 @@
+# Relay Core 4.x — shared by every credit union on this vendor product.
+# Tenants overlay copy on top of this file. Do not fork the capability JSON.
+
+kind: vendor
+id: relay-core
+vendorId: relay-core
+notes: >
+  Recorded names live on the artifact. This pack adds vendor-wide lost-screen
+  detection. A 4.2 tenant that only renamed buttons does not need a new pack.
+
+antiCheckpoints:
+  - kind: textIncludes
+    expect: Core upgrade in progress

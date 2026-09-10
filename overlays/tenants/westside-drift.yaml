@@ -1,0 +1,9 @@
+# Longer accessible names, no copy remaps. Rank-1 role+name misses; rank-3
+# substring text still hits. That is the drift signal for `npm run rediscover`.
+
+kind: tenant
+id: westside-drift
+vendorId: relay-core
+notes: >
+  Westside-drift shipped a11y-name prefixes without remaps. Rank-1 misses;
+  rank-3 text still matches. Re-discover rather than guess remaps.

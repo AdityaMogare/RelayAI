@@ -1,0 +1,31 @@
+# Westside CU — same Relay Core product, green chrome, reordered fields,
+# and a branch-verification interstitial. Overlay remaps copy so the
+# recorded artifact stays green. `?tenant=westside` selects this skin.
+
+kind: tenant
+id: westside
+vendorId: relay-core
+notes: >
+  Westside rebranded Search → Find Member, Disputes → Card Claims, and
+  added a Branch Verification interstitial. Smallest fix is this file.
+  Who: tenant ops. westside-drift.yaml is the re-discover loop instead.
+
+copy:
+  Search: Find Member
+  Member Lookup: Find a Member
+  Disputes: Card Claims
+  Confirm: Submit Request
+
+exceptionalStates:
+  - detect:
+      dialogTitle: Branch Verification
+    classify: recoverable
+    code: BRANCH_VERIFICATION
+    message: Westside branch-network acknowledgement. Dismiss and retry the same step.
+    recoverAction:
+      action: dismiss
+      target:
+        primary:
+          by: role
+          role: button
+          name: Continue

@@ -1,0 +1,9 @@
+# Demo CU — the credit union the artifact was recorded against.
+# No copy remaps. This file exists so the stack is always four layers.
+
+kind: tenant
+id: tenant-9
+vendorId: relay-core
+notes: >
+  Tenant 9 is on Relay Core 4.1 with the recorded labels (Search, Confirm,
+  Member Lookup). Leave this empty unless Demo CU ships a copy change.
