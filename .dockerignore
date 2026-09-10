@@ -1,0 +1,12 @@
+.git
+.env
+Specs
+node_modules
+dist
+coverage
+.cache
+tmp
+*.log
+.DS_Store
+playwright-report
+test-results

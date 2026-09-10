@@ -1,0 +1,49 @@
+services:
+  console:
+    build: .
+    image: relayai:local
+    init: true
+    shm_size: 1gb
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "3000:3000"
+      - "3847:3847"
+    environment:
+      RELAY_BIND_HOST: "0.0.0.0"
+      RELAY_CONSOLE_PORT: "3000"
+      RELAY_OPERATOR_PORT: "3847"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RELAY_LLM_PROVIDER: ${RELAY_LLM_PROVIDER:-}
+      RELAY_MODEL: ${RELAY_MODEL:-}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "--input-type=module",
+          "-e",
+          "fetch('http://127.0.0.1:3000').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+      start_period: 8s
+
+  smoke:
+    image: relayai:local
+    build: .
+    profiles: ["smoke"]
+    init: true
+    shm_size: 1gb
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      RELAY_BIND_HOST: "0.0.0.0"
+      RELAY_CONSOLE_PORT: "3000"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RELAY_LLM_PROVIDER: ${RELAY_LLM_PROVIDER:-}
+      RELAY_MODEL: ${RELAY_MODEL:-}
+    command: ["npm", "run", "docker:smoke"]
