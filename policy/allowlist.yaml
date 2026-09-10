@@ -1,0 +1,22 @@
+# Hosts the agent and replay engine may touch.
+allowedHosts:
+  - 127.0.0.1
+  - localhost
+
+# Action types permitted on an allowlisted host.
+allowedActions:
+  - navigate
+  - click
+  - type
+  - select
+  - extract
+  - dismiss
+  - wait
+
+# Names that mark a click as irreversible / high-impact.
+riskyNames:
+  - confirm
+  - delete
+  - submit
+  - approve
+  - open sub-account
