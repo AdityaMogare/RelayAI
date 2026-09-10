@@ -109,16 +109,6 @@
       }
     },
     {
-      "stepId": "s10-confirm",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "button",
-        "name": "Confirm"
-      }
-    },
-    {
       "stepId": "s11-extract",
       "rank": 1,
       "by": "role",
@@ -131,5 +121,5 @@
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-success"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute"
 }

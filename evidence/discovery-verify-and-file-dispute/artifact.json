@@ -2,7 +2,7 @@
   "schemaVersion": "1.0",
   "id": "verify-and-file-dispute",
   "name": "Verify And File Dispute",
-  "description": "Jane Doe (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
+  "description": "[REDACTED-PII] (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
   "version": 1,
   "app": {
     "vendorId": "relay-core",

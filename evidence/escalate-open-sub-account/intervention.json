@@ -1,10 +1,56 @@
 {
-  "id": "24f77cbd-8c03-491c-ba6c-5d4b42263e97",
-  "createdAt": "2026-09-09T22:05:21.226Z",
   "reason": "Risky/irreversible step requires human approval.",
   "capabilityId": "open-sub-account",
   "stepId": "s06-confirm",
-  "url": "http://127.0.0.1:64055/member/12345/sub-account?product=Share+Savings&step=review",
+  "url": "http://127.0.0.1:51387/member/12345/sub-account?product=Share+Savings&step=review",
   "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account/escalate-s06-confirm.png",
-  "observationPreview": "Relay Credit Union — Confirm Sub-Account | http://127.0.0.1:64055/member/12345/sub-account?product=Share+Savings&step=review | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\nConfirm Sub-Account\n\nOpening Share Savings for member 12345.\n\nThis action is irreversible once confirmed.\n\nConfirm Back"
+  "checkpointExpect": "textIncludes \"Sub-account opened\"",
+  "sessionId": "5cdece6e-0595-4cb2-8dce-f05f5e6cffff",
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/member/12345/sub-account"
+  },
+  "id": "a2ab6fab-10bd-4e5c-acc7-b66545a2e125",
+  "createdAt": "2026-09-10T16:18:36.729Z",
+  "state": "resolved",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-10T16:20:36.729Z",
+  "queuePriority": 20,
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-10T16:18:36.729Z",
+      "note": "Risky/irreversible step requires human approval."
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-10T16:18:36.941Z",
+      "operatorId": "ci-bot",
+      "note": "ci-bot claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-10T16:18:36.941Z",
+      "operatorId": "ci-bot",
+      "note": "ci-bot in_control"
+    },
+    {
+      "state": "returned",
+      "at": "2026-09-10T16:18:36.942Z",
+      "operatorId": "ci-bot",
+      "note": "auto-resume"
+    },
+    {
+      "state": "resolved",
+      "at": "2026-09-10T16:18:37.334Z",
+      "operatorId": "ci-bot",
+      "note": "risky step will execute once"
+    }
+  ],
+  "operatorId": "ci-bot",
+  "stepDisposition": "not_done",
+  "claimedAt": "2026-09-10T16:18:36.941Z",
+  "inControlAt": "2026-09-10T16:18:36.941Z",
+  "returnedAt": "2026-09-10T16:18:36.942Z",
+  "resolvedAt": "2026-09-10T16:18:37.334Z"
 }

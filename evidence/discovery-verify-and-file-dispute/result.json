@@ -1,7 +1,7 @@
 {
   "status": "success",
   "outputs": {
-    "transactionAmount": "$42.18",
+    "transactionAmount": "[REDACTED-PII]",
     "Confirmation": "Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.",
     "disputeConfirmation": "Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201."
   },

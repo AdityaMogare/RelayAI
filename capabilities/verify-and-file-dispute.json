@@ -1,188 +1,368 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "id": "verify-and-file-dispute",
   "name": "Verify And File Dispute",
-  "description": "Jane Doe (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
+  "description": "Look up a member dispute, verify the transaction amount, and file it.",
   "version": 1,
   "app": {
     "vendorId": "relay-core",
     "surfaceKind": "legacy-web"
   },
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
+  "approval": {
+    "requestedBy": "analyst@relay",
+    "approvedBy": "risk@relay",
+    "approvedAt": "2026-09-10T17:00:00.000Z"
+  },
   "parameters": [
     {
       "name": "memberId",
       "type": "string",
-      "description": "Value typed into Member ID during discovery.",
-      "sensitive": false
+      "description": "Member number or name."
     },
     {
-      "name": "disputeId",
+      "name": "merchant",
       "type": "string",
-      "description": "Value typed into Dispute ID during discovery.",
-      "sensitive": false
+      "description": "Merchant on the queue row to open."
+    },
+    {
+      "name": "last4",
+      "type": "string",
+      "description": "Card last 4 on the queue row to open."
     },
     {
       "name": "reason",
       "type": "string",
-      "description": "Value typed into Reason during discovery.",
-      "sensitive": false
+      "description": "Filing reason shown on the form."
     }
   ],
   "outputs": [
     {
       "name": "transactionAmount",
       "type": "money",
+      "pii": true,
+      "description": "Amount displayed on the dispute detail before filing.",
       "locator": {
         "primary": {
           "by": "role",
           "role": "cell",
           "name": "Transaction Amount"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Transaction Amount"
+          },
+          {
+            "by": "text",
+            "text": "Transaction Amount"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Transaction Amount\"]"
+          }
+        ]
       }
     },
     {
       "name": "confirmation",
       "type": "string",
+      "pii": true,
+      "description": "Confirmation text after the dispute is filed.",
       "locator": {
         "primary": {
           "by": "role",
           "role": "status",
           "name": "Confirmation"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
       }
     }
   ],
+  "sideEffects": {
+    "kind": "irreversible",
+    "compensation": "Teller withdraws the case from the dispute queue in the core. Automation cannot un-file a Confirm."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "textIncludes",
+      "expect": "Savings Balance"
+    }
+  },
+  "uses": [
+    {
+      "capabilityId": "lookup-member-savings",
+      "pass": [
+        "memberId"
+      ]
+    }
+  ],
+  "provenance": {
+    "discoveredAt": "2026-09-10T05:12:30.346Z",
+    "discoveredBy": "model",
+    "model": "gpt-4o",
+    "promptHash": "1539c4549b8e7515bfe86e62067d67b27ce52764cda8c6f8922e8b7293c3ea24",
+    "evidenceRunId": "discovery-verify-and-file-dispute",
+    "goal": "Jane Doe called about an unauthorized charge from ACME POS on her card ending 4412. Find that transaction, verify the amount, and file it as Unauthorized."
+  },
+  "idempotencyKeyFrom": [
+    "memberId",
+    "merchant",
+    "last4"
+  ],
   "steps": [
     {
-      "id": "s00-navigate",
-      "action": "navigate",
-      "url": "http://127.0.0.1:3000/",
-      "risk": "safe",
-      "note": "Entry point for this vendor console."
-    },
-    {
-      "id": "s01-type",
-      "action": "type",
-      "target": {
-        "primary": {
-          "by": "role",
-          "role": "textbox",
-          "name": "Member ID"
-        }
-      },
-      "inputFrom": "parameters.memberId",
-      "risk": "safe"
-    },
-    {
-      "id": "s02-click",
-      "action": "click",
-      "target": {
-        "primary": {
-          "by": "role",
-          "role": "button",
-          "name": "Search"
-        }
-      },
-      "risk": "safe"
-    },
-    {
-      "id": "s03-click",
+      "id": "s03-disputes",
       "action": "click",
       "target": {
         "primary": {
           "by": "role",
           "role": "link",
           "name": "Disputes"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Disputes"
+          },
+          {
+            "by": "text",
+            "text": "Disputes"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Disputes\"]"
+          }
+        ]
       },
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Dispute Queue"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s04-type",
-      "action": "type",
-      "target": {
-        "primary": {
-          "by": "role",
-          "role": "textbox",
-          "name": "Dispute ID"
-        }
-      },
-      "inputFrom": "parameters.disputeId",
-      "risk": "safe"
-    },
-    {
-      "id": "s05-click",
+      "id": "s04-open-row",
       "action": "click",
       "target": {
         "primary": {
           "by": "role",
-          "role": "button",
-          "name": "Open"
-        }
+          "role": "link",
+          "name": "Open",
+          "scope": {
+            "by": "row",
+            "hasText": [":merchant", ":last4"]
+          }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Open",
+            "scope": {
+              "by": "row",
+              "hasText": [":merchant", ":last4"]
+            }
+          },
+          {
+            "by": "text",
+            "text": "Open",
+            "scope": {
+              "by": "row",
+              "hasText": [":merchant", ":last4"]
+            }
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Open\"]",
+            "scope": {
+              "by": "row",
+              "hasText": [":merchant", ":last4"]
+            }
+          }
+        ]
       },
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Transaction Amount"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s06-extract",
+      "id": "s06-extract-amount",
       "action": "extract",
       "target": {
         "primary": {
           "by": "role",
           "role": "cell",
           "name": "Transaction Amount"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Transaction Amount"
+          },
+          {
+            "by": "text",
+            "text": "Transaction Amount"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Transaction Amount\"]"
+          }
+        ]
       },
       "outputName": "transactionAmount",
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Transaction Amount"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s07-click",
+      "id": "s07-file",
       "action": "click",
       "target": {
         "primary": {
           "by": "role",
           "role": "link",
           "name": "File Dispute"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "File Dispute"
+          },
+          {
+            "by": "text",
+            "text": "File Dispute"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"File Dispute\"]"
+          }
+        ]
       },
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "File Card Dispute"
+      },
+      "note": "Opening the file form is reversible; confirmation later is not.",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s08-select",
+      "id": "s08-reason",
       "action": "select",
       "target": {
         "primary": {
           "by": "role",
           "role": "combobox",
           "name": "Reason"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Reason"
+          },
+          {
+            "by": "text",
+            "text": "Reason"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Reason\"]"
+          }
+        ]
       },
       "inputFrom": "parameters.reason",
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s09-click",
+      "id": "s09-continue",
       "action": "click",
       "target": {
         "primary": {
           "by": "role",
           "role": "button",
           "name": "Continue"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Continue"
+          },
+          {
+            "by": "text",
+            "text": "Continue"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Continue\"]"
+          }
+        ]
       },
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
-      "id": "s10-click",
+      "id": "s10-confirm",
       "action": "click",
       "target": {
         "primary": {
           "by": "role",
           "role": "button",
           "name": "Confirm"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirm"
+          },
+          {
+            "by": "text",
+            "text": "Confirm"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirm\"]"
+          }
+        ]
       },
-      "risk": "risky"
+      "risk": "risky",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Dispute filed"
+      },
+      "note": "Irreversible filing. Unattended replay requires --approve-risky.",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s11-extract",
@@ -192,10 +372,26 @@
           "by": "role",
           "role": "status",
           "name": "Confirmation"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
       },
       "outputName": "confirmation",
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     }
   ],
   "exceptionalStates": [
@@ -245,9 +441,21 @@
       "detect": {
         "textIncludes": "Session expired"
       },
-      "classify": "hard_failure",
+      "classify": "needs_human",
       "code": "SESSION_EXPIRED",
       "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
     },
     {
       "detect": {
@@ -256,6 +464,15 @@
       "classify": "business_outcome",
       "code": "DISPUTE_NOT_FOUND",
       "message": "No dispute matches the supplied ID for this member."
+    },
+    {
+      "detect": {
+        "locatorMiss": true,
+        "urlIncludes": "/disputes"
+      },
+      "classify": "business_outcome",
+      "code": "DISPUTE_NOT_FOUND",
+      "message": "No queue row matched merchant + last4 for this member."
     },
     {
       "detect": {
@@ -280,6 +497,16 @@
       "classify": "business_outcome",
       "code": "VALIDATION_ERROR",
       "message": "The file-dispute form rejected the input."
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
     }
   ],
   "success": {

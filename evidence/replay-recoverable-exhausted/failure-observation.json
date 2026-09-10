@@ -1,0 +1,22 @@
+{
+  "url": "http://127.0.0.1:51387/?notice=always",
+  "title": "Relay Credit Union — Member Servicing",
+  "refs": [
+    {
+      "ref": "r0",
+      "role": "textbox",
+      "name": "Member ID"
+    },
+    {
+      "ref": "r1",
+      "role": "button",
+      "name": "Search"
+    },
+    {
+      "ref": "r2",
+      "role": "button",
+      "name": "Dismiss"
+    }
+  ],
+  "dialog": "System Notice"
+}

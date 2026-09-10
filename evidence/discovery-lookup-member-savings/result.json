@@ -1,8 +1,8 @@
 {
   "status": "success",
   "outputs": {
-    "savingsBalance": "$4,250.00"
+    "savingsBalance": "[REDACTED-PII]"
   },
-  "message": "The current savings balance for member 12345 has been successfully extracted and is $4,250.00.",
+  "message": "The current savings balance for member 12345 has been successfully extracted and is [REDACTED-PII].",
   "evidencePath": "/Users/adityamogare/RelayAI/evidence/discovery-2026-09-10T04-53-28-674Z"
 }

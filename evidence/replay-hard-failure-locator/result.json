@@ -1,9 +1,12 @@
 {
-  "status": "success",
-  "message": "Capability completed and success checkpoint held.",
-  "outputs": {
-    "savingsBalance": "[REDACTED-PII]"
-  },
+  "status": "failed",
+  "classify": "hard_failure",
+  "code": "LOCATOR_MISS",
+  "stepId": "s03-extract",
+  "expected": "locator cell \"Savins Balance\"",
+  "observed": "No locator matched for extract",
+  "message": "Step s03-extract failed.",
+  "outputs": {},
   "locatorHits": [
     {
       "stepId": "s01-type",
@@ -24,19 +27,9 @@
         "role": "button",
         "name": "Search"
       }
-    },
-    {
-      "stepId": "s03-extract",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "cell",
-        "name": "Savings Balance"
-      }
     }
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-lookup-success"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-hard-failure-locator"
 }

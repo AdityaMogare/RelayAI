@@ -1,10 +1,11 @@
 {
-  "status": "business_outcome",
-  "classify": "business_outcome",
-  "code": "DISPUTE_NOT_FOUND",
-  "message": "No dispute matches the supplied ID for this member.",
+  "status": "failed",
+  "classify": "hard_failure",
+  "code": "OUTPUT_INVALID",
   "stepId": "s06-extract-amount",
-  "observed": "Relay Credit Union — Dispute not found | http://127.0.0.1:51387/member/12345/disputes/DSP-9999 | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nDispute not found\n\nNo dispute DSP-9999 exists for member 12345.\n\nBack to Dispute Queue",
+  "expected": "transactionAmount: money { currency, minor }",
+  "observed": "(empty)",
+  "message": "Step s06-extract-amount checkpoint-looking screen produced an untyped or empty transactionAmount.",
   "outputs": {
     "savingsBalance": "[REDACTED-PII]"
   },
@@ -68,9 +69,19 @@
         "role": "button",
         "name": "Open"
       }
+    },
+    {
+      "stepId": "s06-extract-amount",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Transaction Amount"
+      }
     }
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-not-found"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-output-empty-amount"
 }

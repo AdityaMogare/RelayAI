@@ -1,0 +1,26 @@
+{
+  "url": "http://127.0.0.1:51387/member/12345",
+  "title": "Relay Credit Union — Member 12345",
+  "refs": [
+    {
+      "ref": "r1",
+      "role": "link",
+      "name": "Search"
+    },
+    {
+      "ref": "r3",
+      "role": "link",
+      "name": "Open Sub-Account"
+    },
+    {
+      "ref": "r4",
+      "role": "link",
+      "name": "Disputes"
+    },
+    {
+      "ref": "r6",
+      "role": "link",
+      "name": "Open"
+    }
+  ]
+}

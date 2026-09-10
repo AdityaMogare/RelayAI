@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "id": "open-sub-account",
   "name": "Open Sub-Account",
   "description": "Open a new sub-account for a member and reach the confirmation screen.",
@@ -8,107 +8,310 @@
     "vendorId": "relay-core",
     "surfaceKind": "legacy-web"
   },
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
+  "approval": {
+    "requestedBy": "analyst@relay",
+    "approvedBy": "risk@relay",
+    "approvedAt": "2026-09-10T17:00:00.000Z"
+  },
   "parameters": [
-    { "name": "memberId", "type": "string", "description": "Member number." },
-    { "name": "product", "type": "string", "description": "Product to open." }
+    {
+      "name": "memberId",
+      "type": "string",
+      "description": "Member number."
+    },
+    {
+      "name": "product",
+      "type": "string",
+      "description": "Product to open."
+    }
   ],
   "outputs": [
     {
       "name": "confirmation",
       "type": "string",
+      "pii": true,
       "locator": {
-        "primary": { "by": "role", "role": "status", "name": "Confirmation" }
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
       }
     }
   ],
+  "sideEffects": {
+    "kind": "irreversible",
+    "compensation": "Teller reverses the sub-account from Member Servicing → Close Account. Automation cannot undo Confirm."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "textIncludes",
+      "expect": "Savings Balance"
+    }
+  },
+  "uses": [
+    {
+      "capabilityId": "lookup-member-savings",
+      "pass": [
+        "memberId"
+      ]
+    }
+  ],
+  "provenance": {
+    "discoveredAt": "2026-09-10T12:00:00.000Z",
+    "discoveredBy": "human"
+  },
+  "idempotencyKeyFrom": [
+    "memberId",
+    "product"
+  ],
   "steps": [
-    {
-      "id": "s00-navigate",
-      "action": "navigate",
-      "url": "http://127.0.0.1:3000/",
-      "risk": "safe"
-    },
-    {
-      "id": "s01-type",
-      "action": "type",
-      "target": { "primary": { "by": "role", "role": "textbox", "name": "Member ID" } },
-      "inputFrom": "parameters.memberId",
-      "risk": "safe"
-    },
-    {
-      "id": "s02-search",
-      "action": "click",
-      "target": { "primary": { "by": "role", "role": "button", "name": "Search" } },
-      "risk": "safe"
-    },
     {
       "id": "s03-open",
       "action": "click",
-      "target": { "primary": { "by": "role", "role": "link", "name": "Open Sub-Account" } },
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "Open Sub-Account"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Open Sub-Account"
+          },
+          {
+            "by": "text",
+            "text": "Open Sub-Account"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Open Sub-Account\"]"
+          }
+        ]
+      },
       "risk": "safe",
-      "note": "Opening the form is reversible; confirmation later is not."
+      "note": "Opening the form is reversible; confirmation later is not.",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s04-product",
       "action": "select",
-      "target": { "primary": { "by": "role", "role": "combobox", "name": "Product" } },
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "combobox",
+          "name": "Product"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Product"
+          },
+          {
+            "by": "text",
+            "text": "Product"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Product\"]"
+          }
+        ]
+      },
       "inputFrom": "parameters.product",
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s05-continue",
       "action": "click",
-      "target": { "primary": { "by": "role", "role": "button", "name": "Continue" } },
-      "risk": "safe"
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Continue"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Continue"
+          },
+          {
+            "by": "text",
+            "text": "Continue"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Continue\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s06-confirm",
       "action": "click",
-      "target": { "primary": { "by": "role", "role": "button", "name": "Confirm" } },
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Confirm"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirm"
+          },
+          {
+            "by": "text",
+            "text": "Confirm"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirm\"]"
+          }
+        ]
+      },
       "risk": "risky",
-      "note": "Irreversible confirmation. Unattended replay requires --approve-risky."
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Sub-account opened"
+      },
+      "note": "Irreversible confirmation. Unattended replay requires --approve-risky.",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s07-extract",
       "action": "extract",
-      "target": { "primary": { "by": "role", "role": "status", "name": "Confirmation" } },
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
+      },
       "outputName": "confirmation",
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     }
   ],
   "exceptionalStates": [
     {
-      "detect": { "textIncludes": "Member not found" },
+      "detect": {
+        "textIncludes": "Member not found"
+      },
       "classify": "business_outcome",
       "code": "MEMBER_NOT_FOUND",
       "message": "No member record matches the supplied ID."
     },
     {
-      "detect": { "textIncludes": "Permission denied" },
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
       "classify": "business_outcome",
       "code": "PERMISSION_DENIED",
       "message": "The operator is not authorized to view this member."
     },
     {
-      "detect": { "dialogTitle": "System Notice" },
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The form rejected the input."
+    },
+    {
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
       "classify": "recoverable",
       "code": "SYSTEM_NOTICE",
       "message": "A known interstitial is blocking the work area.",
       "recoverAction": {
         "action": "dismiss",
         "target": {
-          "primary": { "by": "role", "role": "button", "name": "Dismiss" }
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
         }
       }
     },
     {
-      "detect": { "textIncludes": "Session expired" },
-      "classify": "hard_failure",
+      "detect": {
+        "textIncludes": "Session expired"
+      },
+      "classify": "needs_human",
       "code": "SESSION_EXPIRED",
       "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
     }
   ],
   "success": {
-    "checkpoint": { "kind": "textIncludes", "expect": "Sub-account opened" }
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Sub-account opened"
+    }
   }
 }

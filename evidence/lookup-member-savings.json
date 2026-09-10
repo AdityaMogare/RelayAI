@@ -22,7 +22,11 @@
       "type": "money",
       "description": "Current savings balance displayed on the member record.",
       "locator": {
-        "primary": { "by": "role", "role": "cell", "name": "Savings Balance" }
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Savings Balance"
+        }
       }
     }
   ],
@@ -37,19 +41,39 @@
       "id": "s01-type",
       "action": "type",
       "target": {
-        "primary": { "by": "role", "role": "textbox", "name": "Member ID" },
-        "fallbacks": [{ "by": "label", "name": "Member ID" }]
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Member ID"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Member ID"
+          }
+        ]
       },
       "inputFrom": "parameters.memberId",
       "risk": "safe",
-      "checkpoint": { "kind": "textIncludes", "expect": "Member Lookup" }
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Member Lookup"
+      }
     },
     {
       "id": "s02-click",
       "action": "click",
       "target": {
-        "primary": { "by": "role", "role": "button", "name": "Search" },
-        "fallbacks": [{ "by": "text", "text": "Search" }]
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Search"
+        },
+        "fallbacks": [
+          {
+            "by": "text"
+          }
+        ]
       },
       "risk": "safe"
     },
@@ -57,53 +81,82 @@
       "id": "s03-extract",
       "action": "extract",
       "target": {
-        "primary": { "by": "role", "role": "cell", "name": "Savings Balance" },
-        "fallbacks": [{ "by": "css", "selector": "[aria-label=\"Savings Balance\"]" }]
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Savings Balance"
+        },
+        "fallbacks": [
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Savings Balance\"]"
+          }
+        ]
       },
       "outputName": "savingsBalance",
       "risk": "safe",
-      "checkpoint": { "kind": "textIncludes", "expect": "Savings Balance" }
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Savings Balance"
+      }
     }
   ],
   "exceptionalStates": [
     {
-      "detect": { "textIncludes": "Member not found" },
+      "detect": {
+        "textIncludes": "Member not found"
+      },
       "classify": "business_outcome",
       "code": "MEMBER_NOT_FOUND",
       "message": "No member record matches the supplied ID."
     },
     {
-      "detect": { "textIncludes": "Permission denied" },
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
       "classify": "business_outcome",
       "code": "PERMISSION_DENIED",
       "message": "The operator is not authorized to view this member."
     },
     {
-      "detect": { "textIncludes": "Member ID is required" },
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
       "classify": "business_outcome",
       "code": "VALIDATION_ERROR",
       "message": "The form rejected the input."
     },
     {
-      "detect": { "dialogTitle": "System Notice" },
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
       "classify": "recoverable",
       "code": "SYSTEM_NOTICE",
       "message": "A known interstitial is blocking the work area.",
       "recoverAction": {
         "action": "dismiss",
         "target": {
-          "primary": { "by": "role", "role": "button", "name": "Dismiss" }
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
         }
       }
     },
     {
-      "detect": { "textIncludes": "Session expired" },
+      "detect": {
+        "textIncludes": "Session expired"
+      },
       "classify": "hard_failure",
       "code": "SESSION_EXPIRED",
       "message": "The teller session expired and cannot continue safely."
     }
   ],
   "success": {
-    "checkpoint": { "kind": "textIncludes", "expect": "Savings Balance" }
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Savings Balance"
+    }
   }
 }

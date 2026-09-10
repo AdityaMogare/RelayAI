@@ -2,8 +2,7 @@
   "id": "0e2c5d9e-b775-4a62-a731-acd0e37c5e09",
   "createdAt": "2026-09-10T05:12:45.828Z",
   "reason": "Discovery wants a risky action: Confirmation",
-  "goal": "Jane Doe (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
+  "goal": "[REDACTED-PII] (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
   "url": "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/submit?reason=Unauthorized",
-  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/discovery-2026-09-10T05-12-27-655Z/risky.png",
-  "observationPreview": "RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\nDispute filed\n\nConfirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.\n\nReturn to Member"
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/discovery-2026-09-10T05-12-27-655Z/risky.png"
 }

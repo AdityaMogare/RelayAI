@@ -1,9 +1,34 @@
 {
   "status": "business_outcome",
+  "classify": "business_outcome",
   "code": "MEMBER_NOT_FOUND",
   "message": "No member record matches the supplied ID.",
-  "stepId": "s03-extract",
-  "observed": "Relay Credit Union — Member not found | http://127.0.0.1:64055/search?mid=99999 | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nMember not found\n\nNo member record matches the ID provided (99999).\n\nBack to Search",
+  "stepId": "s02-click",
+  "observed": "Relay Credit Union — Member not found | http://127.0.0.1:51387/search?mid=99999 | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nMember not found\n\nNo member record matches the ID provided (99999).\n\nBack to Search",
   "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
   "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-lookup-not-found"
 }

@@ -1,0 +1,69 @@
+{
+  "sql": "SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'",
+  "count": 1,
+  "rows": [
+    {
+      "id": 1,
+      "dispute_id": "DSP-1001",
+      "member_id": "12345",
+      "reason": "Unauthorized",
+      "filed_at": "2026-09-10T16:18:45.583Z"
+    }
+  ],
+  "intervention": {
+    "reason": "Risky/irreversible step requires human approval.",
+    "capabilityId": "verify-and-file-dispute",
+    "stepId": "s10-confirm",
+    "url": "http://127.0.0.1:51387/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
+    "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute/escalate-s10-confirm.png",
+    "checkpointExpect": "textIncludes \"Dispute filed\"",
+    "sessionId": "b7cbf1a3-2310-4617-bcae-8d84f07997b7",
+    "entryCheckpoint": {
+      "kind": "urlIncludes",
+      "expect": "/member/12345/disputes/DSP-1001/file"
+    },
+    "id": "055dcdd8-4f43-4c46-8e86-50688608de5c",
+    "createdAt": "2026-09-10T16:18:45.321Z",
+    "state": "resolved",
+    "ttlMs": 120000,
+    "expiresAt": "2026-09-10T16:20:45.321Z",
+    "queuePriority": 10,
+    "transitions": [
+      {
+        "state": "raised",
+        "at": "2026-09-10T16:18:45.321Z",
+        "note": "Risky/irreversible step requires human approval."
+      },
+      {
+        "state": "claimed",
+        "at": "2026-09-10T16:18:45.529Z",
+        "operatorId": "teller01",
+        "note": "teller01 claimed"
+      },
+      {
+        "state": "in_control",
+        "at": "2026-09-10T16:18:45.529Z",
+        "operatorId": "teller01",
+        "note": "teller01 in_control"
+      },
+      {
+        "state": "returned",
+        "at": "2026-09-10T16:18:45.751Z",
+        "operatorId": "teller01",
+        "note": "teller01 completed the risky step on the live session"
+      },
+      {
+        "state": "resolved",
+        "at": "2026-09-10T16:18:46.157Z",
+        "operatorId": "teller01",
+        "note": "risky step skipped after human handback"
+      }
+    ],
+    "operatorId": "teller01",
+    "stepDisposition": "completed_by_human",
+    "claimedAt": "2026-09-10T16:18:45.529Z",
+    "inControlAt": "2026-09-10T16:18:45.529Z",
+    "returnedAt": "2026-09-10T16:18:45.751Z",
+    "resolvedAt": "2026-09-10T16:18:46.157Z"
+  }
+}

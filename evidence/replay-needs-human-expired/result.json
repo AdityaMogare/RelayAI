@@ -1,0 +1,14 @@
+{
+  "status": "needs_human",
+  "classify": "needs_human",
+  "code": "SESSION_EXPIRED",
+  "stepId": "s00-navigate",
+  "expected": "The teller session expired and cannot continue safely.",
+  "observed": "Relay Credit Union — Session expired | http://127.0.0.1:51387/?expired=1 | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nSession expired\n\nYour teller session has timed out. Sign in again to continue.\n\nReturn to Search",
+  "message": "The teller session expired and cannot continue safely.",
+  "outputs": {},
+  "locatorHits": [],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-needs-human-expired"
+}

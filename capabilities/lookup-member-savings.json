@@ -1,18 +1,21 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "id": "lookup-member-savings",
-  "name": "Lookup Member Savings",
-  "description": "Look up member 12345 and read their current savings balance",
+  "name": "Lookup Member Savings Balance",
+  "description": "Look up a member by ID and read their current savings balance.",
   "version": 1,
   "app": {
     "vendorId": "relay-core",
     "surfaceKind": "legacy-web"
   },
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
   "parameters": [
     {
       "name": "memberId",
-      "type": "number",
-      "description": "Value typed into Member ID during discovery.",
+      "type": "string",
+      "description": "Member number supplied per invocation.",
       "sensitive": false
     }
   ],
@@ -20,22 +23,64 @@
     {
       "name": "savingsBalance",
       "type": "money",
+      "pii": true,
+      "description": "Current savings balance displayed on the member record.",
       "locator": {
         "primary": {
           "by": "role",
           "role": "cell",
           "name": "Savings Balance"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Savings Balance"
+          },
+          {
+            "by": "text",
+            "text": "Savings Balance"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Savings Balance\"]"
+          }
+        ]
       }
     }
   ],
+  "sideEffects": {
+    "kind": "none",
+    "compensation": "Nothing to undo; this capability only reads."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "textIncludes",
+      "expect": "Member Lookup"
+    }
+  },
+  "uses": [],
+  "provenance": {
+    "discoveredAt": "2026-09-10T04:53:31.631Z",
+    "discoveredBy": "model",
+    "model": "gpt-4o",
+    "promptHash": "1539c4549b8e7515bfe86e62067d67b27ce52764cda8c6f8922e8b7293c3ea24",
+    "evidenceRunId": "discovery-lookup-member-savings",
+    "goal": "Look up member 12345 and read their current savings balance"
+  },
   "steps": [
     {
       "id": "s00-navigate",
       "action": "navigate",
       "url": "http://127.0.0.1:3000/",
       "risk": "safe",
-      "note": "Entry point for this vendor console."
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Member Lookup"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s01-type",
@@ -45,10 +90,26 @@
           "by": "role",
           "role": "textbox",
           "name": "Member ID"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Member ID"
+          },
+          {
+            "by": "text",
+            "text": "Member ID"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Member ID\"]"
+          }
+        ]
       },
       "inputFrom": "parameters.memberId",
-      "risk": "safe"
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s02-click",
@@ -58,9 +119,29 @@
           "by": "role",
           "role": "button",
           "name": "Search"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Search"
+          },
+          {
+            "by": "text",
+            "text": "Search"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Search\"]"
+          }
+        ]
       },
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     },
     {
       "id": "s03-extract",
@@ -70,10 +151,30 @@
           "by": "role",
           "role": "cell",
           "name": "Savings Balance"
-        }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Savings Balance"
+          },
+          {
+            "by": "text",
+            "text": "Savings Balance"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Savings Balance\"]"
+          }
+        ]
       },
       "outputName": "savingsBalance",
-      "risk": "safe"
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "Savings Balance"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
     }
   ],
   "exceptionalStates": [
@@ -123,9 +224,31 @@
       "detect": {
         "textIncludes": "Session expired"
       },
-      "classify": "hard_failure",
+      "classify": "needs_human",
       "code": "SESSION_EXPIRED",
       "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
     }
   ],
   "success": {

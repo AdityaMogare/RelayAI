@@ -1,8 +1,94 @@
 {
   "status": "success",
-  "outputs": {
-    "confirmation": "Confirmation: Share Savings is now open for member 12345."
-  },
   "message": "Capability completed and success checkpoint held.",
+  "idempotencyKey": "f9a8551e8459d129ad7b96b443eb2235a3e9e6f6f986d5228c19f77a56ef7994",
+  "outputs": {
+    "savingsBalance": "[REDACTED-PII]",
+    "confirmation": "[REDACTED-PII]"
+  },
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Savings Balance"
+      }
+    },
+    {
+      "stepId": "s03-open",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Open Sub-Account"
+      }
+    },
+    {
+      "stepId": "s04-product",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "combobox",
+        "name": "Product"
+      }
+    },
+    {
+      "stepId": "s05-continue",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Continue"
+      }
+    },
+    {
+      "stepId": "s06-confirm",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Confirm"
+      }
+    },
+    {
+      "stepId": "s07-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "status",
+        "name": "Confirmation"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
   "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account"
 }

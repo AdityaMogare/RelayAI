@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:51387/member/12345/disputes/DSP-1001/submit?reason=Unauthorized",
+  "title": "Relay Credit Union — Dispute filed",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute/handoff-after.png",
+  "ariaDiff": {
+    "added": [
+      "    - row \"Rate board Dispute filed Confirmation Return to Member\":",
+      "      - cell \"Rate board Dispute filed Confirmation Return to Member\":",
+      "            - row \"Dispute filed Confirmation Return to Member\":",
+      "              - cell \"Dispute filed Confirmation Return to Member\":",
+      "                - heading \"Dispute filed\" [level=1]",
+      "                - status \"Confirmation\": \"Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.\"",
+      "                  - link \"Return to Member\":",
+      "                    - /url: /member/12345"
+    ],
+    "removed": [
+      "    - row \"Rate board Confirm Dispute Filing Filing DSP-1001 for [REDACTED-PII] as Unauthorized. This action is irreversible once confirmed. Confirm Back\":",
+      "      - cell \"Rate board Confirm Dispute Filing Filing DSP-1001 for [REDACTED-PII] as Unauthorized. This action is irreversible once confirmed. Confirm Back\":",
+      "            - row \"Confirm Dispute Filing Filing DSP-1001 for [REDACTED-PII] as Unauthorized. This action is irreversible once confirmed. Confirm Back\":",
+      "              - cell \"Confirm Dispute Filing Filing DSP-1001 for [REDACTED-PII] as Unauthorized. This action is irreversible once confirmed. Confirm Back\":",
+      "                - heading \"Confirm Dispute Filing\" [level=1]",
+      "                  - text: Filing",
+      "                  - strong: DSP-1001",
+      "                  - text: for [REDACTED-PII] as",
+      "                  - strong: Unauthorized",
+      "                  - text: .",
+      "                - paragraph: This action is irreversible once confirmed.",
+      "                - button \"Confirm\"",
+      "                - link \"Back\":",
+      "                  - /url: /member/12345/disputes/DSP-1001/file"
+    ]
+  },
+  "sessionId": "b7cbf1a3-2310-4617-bcae-8d84f07997b7",
+  "stepDisposition": "completed_by_human",
+  "stepCompletedByHuman": true,
+  "operatorId": "teller01",
+  "audit": "operator teller01 took control at 2026-09-10T16:18:45.529Z and returned it at 2026-09-10T16:18:45.751Z"
+}
