@@ -1,11 +1,36 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { CapabilityNotFoundError } from "../core/errors.ts";
 import type { Capability } from "../core/types.ts";
+import { hashCapability, sha256Utf8 } from "./hash.ts";
 import { parseCapability } from "./schema.ts";
+
+export type LoadedCapability = {
+  capability: Capability;
+  path: string;
+  contentHash: string;
+};
+
+/** Load `capabilities/<id>.json`. The JSON file is the source of truth — no in-memory goldens. */
+export function readCapabilityFile(idOrPath: string, dir = resolve(process.cwd(), "capabilities")): LoadedCapability {
+  const path = idOrPath.endsWith(".json") ? resolve(idOrPath) : join(dir, `${idOrPath}.json`);
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (err) {
+    throw new CapabilityNotFoundError(idOrPath, path, err);
+  }
+  return {
+    capability: parseCapability(JSON.parse(raw)),
+    path,
+    contentHash: sha256Utf8(raw),
+  };
+}
 
 export interface ArtifactStore {
   save(artifact: Capability): Promise<string>;
   load(idOrPath: string): Promise<Capability>;
+  loadWithHash(idOrPath: string): Promise<LoadedCapability>;
   list(): Promise<Capability[]>;
 }
 
@@ -27,8 +52,11 @@ export class FileArtifactStore implements ArtifactStore {
   }
 
   async load(idOrPath: string): Promise<Capability> {
-    const path = idOrPath.endsWith(".json") ? resolve(idOrPath) : this.pathFor(idOrPath);
-    return parseCapability(JSON.parse(readFileSync(path, "utf8")));
+    return (await this.loadWithHash(idOrPath)).capability;
+  }
+
+  async loadWithHash(idOrPath: string): Promise<LoadedCapability> {
+    return readCapabilityFile(idOrPath, this.dir);
   }
 
   async list(): Promise<Capability[]> {
@@ -48,9 +76,13 @@ export class MemoryArtifactStore implements ArtifactStore {
   }
 
   async load(idOrPath: string): Promise<Capability> {
+    return (await this.loadWithHash(idOrPath)).capability;
+  }
+
+  async loadWithHash(idOrPath: string): Promise<LoadedCapability> {
     const item = this.items.get(idOrPath);
-    if (!item) throw new Error(`Unknown capability ${idOrPath}`);
-    return item;
+    if (!item) throw new CapabilityNotFoundError(idOrPath, idOrPath);
+    return { capability: item, path: idOrPath, contentHash: hashCapability(item) };
   }
 
   async list(): Promise<Capability[]> {

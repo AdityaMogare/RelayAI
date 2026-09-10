@@ -1,12 +1,29 @@
 import { z } from "zod";
+import { ArtifactSchemaError } from "../core/errors.ts";
 import type { Capability } from "../core/types.ts";
+import { CURRENT_SCHEMA_VERSION } from "./defaults.ts";
+import { migrate, UnsupportedSchemaError } from "./migrate.ts";
+
+export const locatorScopeSchema = z.discriminatedUnion("by", [
+  z.object({
+    by: z.literal("row"),
+    hasText: z.array(z.string().min(1)).min(1),
+  }),
+  z.object({
+    by: z.literal("region"),
+    heading: z.string().min(1),
+  }),
+]);
 
 export const locatorSchema = z.object({
-  by: z.enum(["role", "label", "text", "css"]),
+  by: z.enum(["role", "label", "text", "css", "cellInRow"]),
   role: z.string().optional(),
   name: z.string().optional(),
   text: z.string().optional(),
   selector: z.string().optional(),
+  scope: locatorScopeSchema.optional(),
+  row: z.object({ matches: z.string().min(1) }).optional(),
+  cell: z.string().min(1).optional(),
 });
 
 export const targetSchema = z.object({
@@ -24,8 +41,9 @@ export const exceptionalStateSchema = z.object({
     textIncludes: z.string().optional(),
     dialogTitle: z.string().optional(),
     urlIncludes: z.string().optional(),
+    locatorMiss: z.boolean().optional(),
   }),
-  classify: z.enum(["business_outcome", "recoverable", "hard_failure"]),
+  classify: z.enum(["business_outcome", "recoverable", "transient", "hard_failure", "needs_human"]),
   code: z.string().min(1),
   message: z.string().min(1),
   recoverAction: z
@@ -38,7 +56,7 @@ export const exceptionalStateSchema = z.object({
 });
 
 export const capabilitySchema: z.ZodType<Capability> = z.object({
-  schemaVersion: z.literal("1.0"),
+  schemaVersion: z.literal(CURRENT_SCHEMA_VERSION),
   id: z.string().min(1),
   name: z.string().min(1),
   description: z.string().min(1),
@@ -61,8 +79,46 @@ export const capabilitySchema: z.ZodType<Capability> = z.object({
       type: z.enum(["string", "money"]),
       description: z.string().optional(),
       locator: targetSchema,
+      pii: z.boolean().optional(),
     }),
   ),
+  auth: z
+    .object({
+      credentialRef: z.string().min(1),
+    })
+    .optional(),
+  approval: z
+    .object({
+      requestedBy: z.string().min(1),
+      approvedBy: z.string().min(1),
+      approvedAt: z.string().min(1),
+    })
+    .optional(),
+  sideEffects: z.object({
+    kind: z.enum(["none", "creates", "mutates", "irreversible"]),
+    compensation: z.string().min(1),
+  }),
+  preconditions: z.object({
+    requiresSession: z.boolean(),
+    requiresRole: z.string().min(1).optional(),
+    entryCheckpoint: checkpointSchema,
+  }),
+  uses: z.array(
+    z.object({
+      capabilityId: z.string().min(1),
+      pass: z.array(z.string().min(1)),
+    }),
+  ),
+  provenance: z.object({
+    discoveredAt: z.string().min(1),
+    discoveredBy: z.enum(["model", "human"]),
+    model: z.string().optional(),
+    promptHash: z.string().optional(),
+    evidenceRunId: z.string().optional(),
+    goal: z.string().min(1).optional(),
+    assistedBy: z.string().min(1).optional(),
+  }),
+  idempotencyKeyFrom: z.array(z.string().min(1)).optional(),
   steps: z.array(
     z.object({
       id: z.string().min(1),
@@ -74,17 +130,28 @@ export const capabilitySchema: z.ZodType<Capability> = z.object({
       outputName: z.string().optional(),
       risk: z.enum(["safe", "risky"]),
       checkpoint: checkpointSchema.optional(),
+      antiCheckpoints: z.array(checkpointSchema).optional(),
       note: z.string().optional(),
-    }),
+    timeoutMs: z.number().int().positive(),
+    retryBudget: z.number().int().nonnegative(),
+    assistedBy: z.string().min(1).optional(),
+  }),
   ),
   exceptionalStates: z.array(exceptionalStateSchema),
+  antiCheckpoints: z.array(checkpointSchema).optional(),
   success: z.object({
     checkpoint: checkpointSchema,
   }),
 });
 
 export function parseCapability(data: unknown): Capability {
-  return capabilitySchema.parse(data);
+  try {
+    return capabilitySchema.parse(migrate(data));
+  } catch (err) {
+    if (err instanceof UnsupportedSchemaError || err instanceof ArtifactSchemaError) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    throw new ArtifactSchemaError(message, err);
+  }
 }
 
 export const VENDOR_EXCEPTIONS = [
@@ -120,9 +187,16 @@ export const VENDOR_EXCEPTIONS = [
   },
   {
     detect: { textIncludes: "Session expired" },
-    classify: "hard_failure" as const,
+    classify: "needs_human" as const,
     code: "SESSION_EXPIRED",
     message: "The teller session expired and cannot continue safely.",
+  },
+  {
+    detect: { textIncludes: "temporarily unavailable" },
+    classify: "transient" as const,
+    code: "CORE_UNAVAILABLE",
+    message: "The servicing host is temporarily unavailable.",
+    recoverAction: { action: "wait" as const, ms: 200 },
   },
 ];
 
@@ -132,6 +206,12 @@ export const DISPUTE_EXCEPTIONS = [
     classify: "business_outcome" as const,
     code: "DISPUTE_NOT_FOUND",
     message: "No dispute matches the supplied ID for this member.",
+  },
+  {
+    detect: { locatorMiss: true, urlIncludes: "/disputes" },
+    classify: "business_outcome" as const,
+    code: "DISPUTE_NOT_FOUND",
+    message: "No queue row matched merchant + last4 for this member.",
   },
   {
     detect: { textIncludes: "Dispute already filed" },

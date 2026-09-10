@@ -15,9 +15,16 @@ export type AgentDecision = {
   businessCode?: string;
 };
 
+export type LlmUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+};
+
 export type LlmTurn = {
   decision: AgentDecision;
   raw?: unknown;
+  usage?: LlmUsage;
 };
 
 export type LlmIdentity = {
