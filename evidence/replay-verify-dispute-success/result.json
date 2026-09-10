@@ -1,0 +1,9 @@
+{
+  "status": "success",
+  "outputs": {
+    "transactionAmount": "$42.18",
+    "confirmation": "Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201."
+  },
+  "message": "Capability completed and success checkpoint held.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-success"
+}

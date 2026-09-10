@@ -1,0 +1,291 @@
+{
+  "schemaVersion": "1.0",
+  "id": "verify-and-file-dispute",
+  "name": "Verify And File Dispute",
+  "description": "Jane Doe (member 12345) reported an unauthorized ACME POS charge. Look up the member, open Disputes, find DSP-1001, read the transaction amount, and file the dispute with reason \"Unauthorized\".",
+  "version": 1,
+  "app": {
+    "vendorId": "relay-core",
+    "surfaceKind": "legacy-web"
+  },
+  "parameters": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "description": "Value typed into Member ID during discovery.",
+      "sensitive": false
+    },
+    {
+      "name": "disputeId",
+      "type": "string",
+      "description": "Value typed into Dispute ID during discovery.",
+      "sensitive": false
+    },
+    {
+      "name": "reason",
+      "type": "string",
+      "description": "Value typed into Reason during discovery.",
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "transactionAmount",
+      "type": "money",
+      "locator": {
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Transaction Amount"
+        }
+      }
+    },
+    {
+      "name": "confirmation",
+      "type": "string",
+      "locator": {
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "s00-navigate",
+      "action": "navigate",
+      "url": "http://127.0.0.1:3000/",
+      "risk": "safe",
+      "note": "Entry point for this vendor console."
+    },
+    {
+      "id": "s01-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Member ID"
+        }
+      },
+      "inputFrom": "parameters.memberId",
+      "risk": "safe"
+    },
+    {
+      "id": "s02-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Search"
+        }
+      },
+      "risk": "safe"
+    },
+    {
+      "id": "s03-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "Disputes"
+        }
+      },
+      "risk": "safe"
+    },
+    {
+      "id": "s04-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Dispute ID"
+        }
+      },
+      "inputFrom": "parameters.disputeId",
+      "risk": "safe"
+    },
+    {
+      "id": "s05-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Open"
+        }
+      },
+      "risk": "safe"
+    },
+    {
+      "id": "s06-extract",
+      "action": "extract",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Transaction Amount"
+        }
+      },
+      "outputName": "transactionAmount",
+      "risk": "safe"
+    },
+    {
+      "id": "s07-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "File Dispute"
+        }
+      },
+      "risk": "safe"
+    },
+    {
+      "id": "s08-select",
+      "action": "select",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "combobox",
+          "name": "Reason"
+        }
+      },
+      "inputFrom": "parameters.reason",
+      "risk": "safe"
+    },
+    {
+      "id": "s09-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Continue"
+        }
+      },
+      "risk": "safe"
+    },
+    {
+      "id": "s10-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Confirm"
+        }
+      },
+      "risk": "risky"
+    },
+    {
+      "id": "s11-extract",
+      "action": "extract",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        }
+      },
+      "outputName": "confirmation",
+      "risk": "safe"
+    }
+  ],
+  "exceptionalStates": [
+    {
+      "detect": {
+        "textIncludes": "Member not found"
+      },
+      "classify": "business_outcome",
+      "code": "MEMBER_NOT_FOUND",
+      "message": "No member record matches the supplied ID."
+    },
+    {
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
+      "classify": "business_outcome",
+      "code": "PERMISSION_DENIED",
+      "message": "The operator is not authorized to view this member."
+    },
+    {
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The form rejected the input."
+    },
+    {
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
+      "classify": "recoverable",
+      "code": "SYSTEM_NOTICE",
+      "message": "A known interstitial is blocking the work area.",
+      "recoverAction": {
+        "action": "dismiss",
+        "target": {
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
+        }
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Session expired"
+      },
+      "classify": "hard_failure",
+      "code": "SESSION_EXPIRED",
+      "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "Dispute not found"
+      },
+      "classify": "business_outcome",
+      "code": "DISPUTE_NOT_FOUND",
+      "message": "No dispute matches the supplied ID for this member."
+    },
+    {
+      "detect": {
+        "textIncludes": "Dispute already filed"
+      },
+      "classify": "business_outcome",
+      "code": "DISPUTE_ALREADY_FILED",
+      "message": "This dispute was already submitted and cannot be filed again."
+    },
+    {
+      "detect": {
+        "textIncludes": "Dispute ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The dispute queue rejected the input."
+    },
+    {
+      "detect": {
+        "textIncludes": "Reason is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The file-dispute form rejected the input."
+    }
+  ],
+  "success": {
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Dispute filed"
+    }
+  }
+}

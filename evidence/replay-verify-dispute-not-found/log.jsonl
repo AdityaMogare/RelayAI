@@ -1,0 +1,8 @@
+{"at":"2026-09-09T22:05:30.014Z","runId":"replay-verify-dispute-not-found","kind":"replay.start","data":{"capabilityId":"verify-and-file-dispute","version":1,"inputs":{"memberId":"12345","disputeId":"DSP-9999","reason":"Unauthorized"}}}
+{"at":"2026-09-09T22:05:30.403Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s00-navigate","action":"navigate"}}
+{"at":"2026-09-09T22:05:30.954Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s01-type","action":"type","target":{"by":"role","role":"textbox","name":"Member ID"},"value":"[param parameters.memberId]"}}
+{"at":"2026-09-09T22:05:31.703Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s02-search","action":"click","target":{"by":"role","role":"button","name":"Search"}}}
+{"at":"2026-09-09T22:05:32.291Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s03-disputes","action":"click","target":{"by":"role","role":"link","name":"Disputes"}}}
+{"at":"2026-09-09T22:05:33.063Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s04-dispute-id","action":"type","target":{"by":"role","role":"textbox","name":"Dispute ID"},"value":"[param parameters.disputeId]"}}
+{"at":"2026-09-09T22:05:33.611Z","runId":"replay-verify-dispute-not-found","kind":"replay.step","data":{"stepId":"s05-open","action":"click","target":{"by":"role","role":"button","name":"Open"}}}
+{"at":"2026-09-09T22:05:34.221Z","runId":"replay-verify-dispute-not-found","kind":"replay.exception","data":{"code":"DISPUTE_NOT_FOUND","classify":"business_outcome","stepId":"s06-extract-amount"}}

@@ -1,0 +1,8 @@
+{
+  "status": "success",
+  "outputs": {
+    "confirmation": "Confirmation: Share Savings is now open for member 12345."
+  },
+  "message": "Capability completed and success checkpoint held.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account"
+}

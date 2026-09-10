@@ -1,0 +1,8 @@
+{
+  "status": "success",
+  "outputs": {
+    "savingsBalance": "$4,250.00"
+  },
+  "message": "Capability completed and success checkpoint held.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-lookup-success"
+}

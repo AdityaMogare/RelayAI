@@ -1,0 +1,6 @@
+{"at":"2026-09-09T22:05:11.883Z","runId":"replay-lookup-success","kind":"replay.start","data":{"capabilityId":"lookup-member-savings","version":1,"inputs":{"memberId":"12345"}}}
+{"at":"2026-09-09T22:05:12.267Z","runId":"replay-lookup-success","kind":"replay.step","data":{"stepId":"s00-navigate","action":"navigate"}}
+{"at":"2026-09-09T22:05:12.903Z","runId":"replay-lookup-success","kind":"replay.step","data":{"stepId":"s01-type","action":"type","target":{"by":"role","role":"textbox","name":"Member ID"},"value":"[param parameters.memberId]"}}
+{"at":"2026-09-09T22:05:13.671Z","runId":"replay-lookup-success","kind":"replay.step","data":{"stepId":"s02-click","action":"click","target":{"by":"role","role":"button","name":"Search"}}}
+{"at":"2026-09-09T22:05:14.286Z","runId":"replay-lookup-success","kind":"replay.step","data":{"stepId":"s03-extract","action":"extract","target":{"by":"role","role":"cell","name":"Savings Balance"}}}
+{"at":"2026-09-09T22:05:14.680Z","runId":"replay-lookup-success","kind":"replay.end","data":{"status":"success","outputs":{"savingsBalance":"$4,250.00"}}}

@@ -1,0 +1,10 @@
+{
+  "id": "24f77cbd-8c03-491c-ba6c-5d4b42263e97",
+  "createdAt": "2026-09-09T22:05:21.226Z",
+  "reason": "Risky/irreversible step requires human approval.",
+  "capabilityId": "open-sub-account",
+  "stepId": "s06-confirm",
+  "url": "http://127.0.0.1:64055/member/12345/sub-account?product=Share+Savings&step=review",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account/escalate-s06-confirm.png",
+  "observationPreview": "Relay Credit Union — Confirm Sub-Account | http://127.0.0.1:64055/member/12345/sub-account?product=Share+Savings&step=review | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\nConfirm Sub-Account\n\nOpening Share Savings for member 12345.\n\nThis action is irreversible once confirmed.\n\nConfirm Back"
+}

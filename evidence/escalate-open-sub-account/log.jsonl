@@ -1,0 +1,12 @@
+{"at":"2026-09-09T22:05:17.411Z","runId":"escalate-open-sub-account","kind":"replay.start","data":{"capabilityId":"open-sub-account","version":1,"inputs":{"memberId":"12345","product":"Share Savings"}}}
+{"at":"2026-09-09T22:05:17.801Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s00-navigate","action":"navigate"}}
+{"at":"2026-09-09T22:05:18.338Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s01-type","action":"type","target":{"by":"role","role":"textbox","name":"Member ID"},"value":"[param parameters.memberId]"}}
+{"at":"2026-09-09T22:05:18.888Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s02-search","action":"click","target":{"by":"role","role":"button","name":"Search"}}}
+{"at":"2026-09-09T22:05:19.454Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s03-open","action":"click","target":{"by":"role","role":"link","name":"Open Sub-Account"}}}
+{"at":"2026-09-09T22:05:20.042Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s04-product","action":"select","target":{"by":"role","role":"combobox","name":"Product"},"value":"[param parameters.product]"}}
+{"at":"2026-09-09T22:05:20.604Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s05-continue","action":"click","target":{"by":"role","role":"button","name":"Continue"}}}
+{"at":"2026-09-09T22:05:21.226Z","runId":"escalate-open-sub-account","kind":"escalation","data":{"id":"24f77cbd-8c03-491c-ba6c-5d4b42263e97","reason":"Risky/irreversible step requires human approval.","stepId":"s06-confirm"}}
+{"at":"2026-09-09T22:05:21.226Z","runId":"escalate-open-sub-account","kind":"human","data":{"interventionId":"24f77cbd-8c03-491c-ba6c-5d4b42263e97","action":"resume","note":"operator confirmed on the live session"}}
+{"at":"2026-09-09T22:05:21.226Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s06-confirm","action":"click","target":{"by":"role","role":"button","name":"Confirm"}}}
+{"at":"2026-09-09T22:05:21.825Z","runId":"escalate-open-sub-account","kind":"replay.step","data":{"stepId":"s07-extract","action":"extract","target":{"by":"role","role":"status","name":"Confirmation"}}}
+{"at":"2026-09-09T22:05:22.019Z","runId":"escalate-open-sub-account","kind":"replay.end","data":{"status":"success","outputs":{"confirmation":"Confirmation: Share Savings is now open for member 12345."}}}

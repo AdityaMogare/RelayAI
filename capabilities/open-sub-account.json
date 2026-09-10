@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "1.0",
+  "id": "open-sub-account",
+  "name": "Open Sub-Account",
+  "description": "Open a new sub-account for a member and reach the confirmation screen.",
+  "version": 1,
+  "app": {
+    "vendorId": "relay-core",
+    "surfaceKind": "legacy-web"
+  },
+  "parameters": [
+    { "name": "memberId", "type": "string", "description": "Member number." },
+    { "name": "product", "type": "string", "description": "Product to open." }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "locator": {
+        "primary": { "by": "role", "role": "status", "name": "Confirmation" }
+      }
+    }
+  ],
+  "steps": [
+    {
+      "id": "s00-navigate",
+      "action": "navigate",
+      "url": "http://127.0.0.1:3000/",
+      "risk": "safe"
+    },
+    {
+      "id": "s01-type",
+      "action": "type",
+      "target": { "primary": { "by": "role", "role": "textbox", "name": "Member ID" } },
+      "inputFrom": "parameters.memberId",
+      "risk": "safe"
+    },
+    {
+      "id": "s02-search",
+      "action": "click",
+      "target": { "primary": { "by": "role", "role": "button", "name": "Search" } },
+      "risk": "safe"
+    },
+    {
+      "id": "s03-open",
+      "action": "click",
+      "target": { "primary": { "by": "role", "role": "link", "name": "Open Sub-Account" } },
+      "risk": "safe",
+      "note": "Opening the form is reversible; confirmation later is not."
+    },
+    {
+      "id": "s04-product",
+      "action": "select",
+      "target": { "primary": { "by": "role", "role": "combobox", "name": "Product" } },
+      "inputFrom": "parameters.product",
+      "risk": "safe"
+    },
+    {
+      "id": "s05-continue",
+      "action": "click",
+      "target": { "primary": { "by": "role", "role": "button", "name": "Continue" } },
+      "risk": "safe"
+    },
+    {
+      "id": "s06-confirm",
+      "action": "click",
+      "target": { "primary": { "by": "role", "role": "button", "name": "Confirm" } },
+      "risk": "risky",
+      "note": "Irreversible confirmation. Unattended replay requires --approve-risky."
+    },
+    {
+      "id": "s07-extract",
+      "action": "extract",
+      "target": { "primary": { "by": "role", "role": "status", "name": "Confirmation" } },
+      "outputName": "confirmation",
+      "risk": "safe"
+    }
+  ],
+  "exceptionalStates": [
+    {
+      "detect": { "textIncludes": "Member not found" },
+      "classify": "business_outcome",
+      "code": "MEMBER_NOT_FOUND",
+      "message": "No member record matches the supplied ID."
+    },
+    {
+      "detect": { "textIncludes": "Permission denied" },
+      "classify": "business_outcome",
+      "code": "PERMISSION_DENIED",
+      "message": "The operator is not authorized to view this member."
+    },
+    {
+      "detect": { "dialogTitle": "System Notice" },
+      "classify": "recoverable",
+      "code": "SYSTEM_NOTICE",
+      "message": "A known interstitial is blocking the work area.",
+      "recoverAction": {
+        "action": "dismiss",
+        "target": {
+          "primary": { "by": "role", "role": "button", "name": "Dismiss" }
+        }
+      }
+    },
+    {
+      "detect": { "textIncludes": "Session expired" },
+      "classify": "hard_failure",
+      "code": "SESSION_EXPIRED",
+      "message": "The teller session expired and cannot continue safely."
+    }
+  ],
+  "success": {
+    "checkpoint": { "kind": "textIncludes", "expect": "Sub-account opened" }
+  }
+}

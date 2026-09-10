@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "outputs": {
+    "transactionAmount": "$42.18",
+    "Confirmation": "Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.",
+    "disputeConfirmation": "Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201."
+  },
+  "message": "The dispute has been successfully filed and the confirmation message has been extracted.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/discovery-2026-09-10T05-12-27-655Z"
+}

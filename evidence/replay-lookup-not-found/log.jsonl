@@ -1,0 +1,5 @@
+{"at":"2026-09-09T22:05:14.887Z","runId":"replay-lookup-not-found","kind":"replay.start","data":{"capabilityId":"lookup-member-savings","version":1,"inputs":{"memberId":"99999"}}}
+{"at":"2026-09-09T22:05:15.262Z","runId":"replay-lookup-not-found","kind":"replay.step","data":{"stepId":"s00-navigate","action":"navigate"}}
+{"at":"2026-09-09T22:05:15.837Z","runId":"replay-lookup-not-found","kind":"replay.step","data":{"stepId":"s01-type","action":"type","target":{"by":"role","role":"textbox","name":"Member ID"},"value":"[param parameters.memberId]"}}
+{"at":"2026-09-09T22:05:16.565Z","runId":"replay-lookup-not-found","kind":"replay.step","data":{"stepId":"s02-click","action":"click","target":{"by":"role","role":"button","name":"Search"}}}
+{"at":"2026-09-09T22:05:17.171Z","runId":"replay-lookup-not-found","kind":"replay.exception","data":{"code":"MEMBER_NOT_FOUND","classify":"business_outcome","stepId":"s03-extract"}}
