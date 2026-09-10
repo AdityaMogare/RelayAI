@@ -411,7 +411,7 @@ export class MockSurface implements Surface {
     if (this.page === "disputeFiled") {
       return {
         ...base,
-        url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/confirmation",
+        url: "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/receipt",
         title: "Relay Credit Union — Dispute filed",
         aria: '- status "Confirmation"',
         text: "Dispute filed Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.",

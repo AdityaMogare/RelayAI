@@ -420,7 +420,8 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
           send(res, 200, notFoundPage(last));
           return;
         }
-        send(res, 200, memberResultsPage(last, { rows: found, page: 1, pages: 1, total: found.length }));
+        const page = paginate(found, Number(url.searchParams.get("page") ?? 1), SEARCH_PAGE_SIZE);
+        send(res, 200, memberResultsPage(last, page));
         return;
       }
       if (!mid) {
@@ -507,6 +508,14 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
         return;
       }
       ctx.filings.insertSubAccount({ member_id: memberId, product });
+      redirect(res, `/member/${memberId}/sub-account/opened?product=${encodeURIComponent(product)}`);
+      return;
+    }
+
+    const openedMatch = url.pathname.match(/^\/member\/([^/]+)\/sub-account\/opened$/);
+    if (openedMatch) {
+      const memberId = openedMatch[1] ?? "";
+      const product = (url.searchParams.get("product") ?? "Share Savings").trim() || "Share Savings";
       send(res, 200, subAccountDone(memberId, product));
       return;
     }

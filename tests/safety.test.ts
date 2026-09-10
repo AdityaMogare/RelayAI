@@ -38,6 +38,12 @@ describe("route-level allowlist", () => {
     expect(() =>
       policy.assertRequest("GET", "http://127.0.0.1:3000/member/12345/sub-account/confirm"),
     ).toThrow(PolicyViolation);
+    expect(() =>
+      policy.assertRequest("GET", "http://127.0.0.1:3000/member/12345/sub-account/opened"),
+    ).not.toThrow();
+    expect(() =>
+      policy.assertRequest("GET", "http://127.0.0.1:3000/member/12345/disputes/DSP-1001/receipt"),
+    ).not.toThrow();
   });
 
   it("answers could this agent ever reach the wire-transfer screen with a flat no", () => {

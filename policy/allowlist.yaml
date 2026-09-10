@@ -30,14 +30,13 @@ allowedRoutes:
   - { method: GET, path: "/member/*" }
   - { method: GET, path: "/member/*/sub-account" }
   - { method: POST, path: "/member/*/sub-account/confirm" }
-  - { method: GET, path: "/member/*/sub-account/confirm" }
+  - { method: GET, path: "/member/*/sub-account/opened" }
   - { method: GET, path: "/member/*/disputes" }
   - { method: GET, path: "/member/*/disputes/open" }
   - { method: GET, path: "/member/*/disputes/*" }
   - { method: GET, path: "/member/*/disputes/*/file" }
   - { method: POST, path: "/member/*/disputes/*/submit" }
   - { method: GET, path: "/member/*/disputes/*/receipt" }
-  - { method: GET, path: "/member/*/disputes/*/submit" }
 
 # Denied wins. POST /admin/* never.
 deniedRoutes:

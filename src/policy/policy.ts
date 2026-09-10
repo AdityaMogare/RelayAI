@@ -36,7 +36,6 @@ const DEFAULT_ROUTES: RouteRule[] = [
   { method: "GET", path: "/member/*/disputes/*/file" },
   { method: "POST", path: "/member/*/disputes/*/submit" },
   { method: "GET", path: "/member/*/disputes/*/receipt" },
-  { method: "GET", path: "/member/*/disputes/*/confirmation" },
 ];
 
 const DEFAULT_DENIED: RouteRule[] = [
