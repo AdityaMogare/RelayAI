@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
+import { LlmError, MissingApiKeyError } from "../core/errors.ts";
 import type { LlmClient, LlmIdentity, LlmTurn, AgentDecision } from "../core/llm.ts";
 import type { Observation } from "../core/types.ts";
+import { DISCOVERY_SYSTEM_PROMPT } from "./prompt.ts";
 
 const TOOLS = [
   {
@@ -94,25 +96,6 @@ const TOOLS = [
   },
 ] as const;
 
-const SYSTEM = `You operate a credit-union back-office console through its accessibility tree.
-You are discovering a flow that will later be replayed without you.
-
-Rules:
-- Prefer role + accessible name. Never invent CSS selectors.
-- One tool call per turn.
-- Type and select exact values from the goal (member ID, dispute ID, reason).
-- For table fields, extract the data cell (role "cell"), not the rowheader. The value is the amount/text in that cell, not the label.
-- Type identifiers into labeled fields (Member ID, Dispute ID). Do not click a table row to open a record — that will not replay with a different ID.
-- On a queue/list, type the ID and Open the record before extracting. Extract Transaction Amount only from the dispute detail, not the queue.
-- Extract only labeled fields (Savings Balance, Transaction Amount, Confirmation). Never use a dollar amount as the accessible name.
-- Finish only when the whole goal is done. If the goal is only to read a balance, extract then finish. If it also asks to file, open, or confirm, keep going after extracts.
-- When you see Confirmation, "Dispute filed", or "Sub-account opened", extract that status then finish. Do not dismiss after success.
-- Do not extract the same control twice.
-- Confirm / Delete / Approve are irreversible. Still click them so the step is recorded; the runtime may pause for a human first.
-- If you see "Member not found", "Permission denied", "Dispute not found", or "Dispute already filed", finish with a businessCode.
-- If you see "System Notice", dismiss it.
-- If you cannot proceed safely, escalate.
-- Stay on the current origin.`;
 
 function formatObs(observation: Observation): string {
   const refs = observation.refs.map((r) => `[${r.ref}] ${r.role} "${r.name}"`).join("\n");
@@ -151,7 +134,7 @@ export class AnthropicClient implements LlmClient {
   private readonly model: string;
 
   constructor(apiKey = process.env.ANTHROPIC_API_KEY, model = process.env.RELAY_MODEL) {
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY is required for live discovery.");
+    if (!apiKey) throw new MissingApiKeyError("ANTHROPIC_API_KEY");
     this.client = new Anthropic({ apiKey });
     this.model = model ?? "claude-sonnet-4-20250514";
     this.identity = { provider: "anthropic", model: this.model, scripted: false };
@@ -163,10 +146,11 @@ export class AnthropicClient implements LlmClient {
     history: string[];
     remainingSteps: number;
   }): Promise<LlmTurn> {
+    const started = Date.now();
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 1024,
-      system: SYSTEM,
+      system: DISCOVERY_SYSTEM_PROMPT,
       tools: TOOLS as unknown as Anthropic.Tool[],
       tool_choice: { type: "any" },
       messages: [
@@ -178,9 +162,17 @@ export class AnthropicClient implements LlmClient {
     });
     const tool = response.content.find((block) => block.type === "tool_use");
     if (!tool || tool.type !== "tool_use") {
-      throw new Error("Model returned no tool call.");
+      throw new LlmError("Model returned no tool call.");
     }
-    return { decision: toDecision(tool.name, tool.input as Record<string, unknown>), raw: tool };
+    return {
+      decision: toDecision(tool.name, tool.input as Record<string, unknown>),
+      raw: tool,
+      usage: {
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        latencyMs: Date.now() - started,
+      },
+    };
   }
 }
 
@@ -190,7 +182,7 @@ export class OpenAIClient implements LlmClient {
   private readonly model: string;
 
   constructor(apiKey = process.env.OPENAI_API_KEY, model = process.env.RELAY_MODEL) {
-    if (!apiKey) throw new Error("OPENAI_API_KEY is required for live discovery.");
+    if (!apiKey) throw new MissingApiKeyError("OPENAI_API_KEY");
     this.client = new OpenAI({ apiKey });
     this.model = model ?? "gpt-4o";
     this.identity = { provider: "openai", model: this.model, scripted: false };
@@ -210,12 +202,13 @@ export class OpenAIClient implements LlmClient {
         parameters: tool.input_schema,
       },
     }));
+    const started = Date.now();
     const response = await this.client.chat.completions.create({
       model: this.model,
       tool_choice: "required",
       tools,
       messages: [
-        { role: "system", content: SYSTEM },
+        { role: "system", content: DISCOVERY_SYSTEM_PROMPT },
         {
           role: "user",
           content: `Goal: ${input.goal}\nRemaining steps: ${input.remainingSteps}\nRecent actions:\n${input.history.join("\n") || "(none)"}\n\n${formatObs(input.observation)}`,
@@ -223,9 +216,17 @@ export class OpenAIClient implements LlmClient {
       ],
     });
     const call = response.choices[0]?.message.tool_calls?.[0];
-    if (!call || call.type !== "function") throw new Error("Model returned no tool call.");
+    if (!call || call.type !== "function") throw new LlmError("Model returned no tool call.");
     const args = JSON.parse(call.function.arguments || "{}") as Record<string, unknown>;
-    return { decision: toDecision(call.function.name, args), raw: call };
+    return {
+      decision: toDecision(call.function.name, args),
+      raw: call,
+      usage: {
+        inputTokens: response.usage?.prompt_tokens ?? 0,
+        outputTokens: response.usage?.completion_tokens ?? 0,
+        latencyMs: Date.now() - started,
+      },
+    };
   }
 }
 
@@ -236,13 +237,18 @@ export class ScriptedLlm implements LlmClient {
 
   async decide(): Promise<LlmTurn> {
     const decision = this.decisions.shift();
-    if (!decision) throw new Error("Scripted LLM exhausted.");
+    if (!decision) throw new LlmError("Scripted LLM exhausted.");
     return { decision };
   }
 }
 
-export function createLlmClient(): LlmClient {
-  const provider = (process.env.RELAY_LLM_PROVIDER ?? (process.env.ANTHROPIC_API_KEY ? "anthropic" : "openai")).toLowerCase();
-  if (provider === "openai") return new OpenAIClient();
-  return new AnthropicClient();
+export function createLlmClient(opts?: { provider?: string; model?: string }): LlmClient {
+  const provider = (
+    opts?.provider ??
+    process.env.RELAY_LLM_PROVIDER ??
+    (process.env.ANTHROPIC_API_KEY ? "anthropic" : "openai")
+  ).toLowerCase();
+  const model = opts?.model ?? process.env.RELAY_MODEL;
+  if (provider === "openai") return new OpenAIClient(process.env.OPENAI_API_KEY, model);
+  return new AnthropicClient(process.env.ANTHROPIC_API_KEY, model);
 }

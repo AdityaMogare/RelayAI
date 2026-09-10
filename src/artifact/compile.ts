@@ -1,12 +1,39 @@
-import type { Action, ArtifactStep, Capability, Observation } from "../core/types.ts";
+import type { Action, ArtifactStep, Capability, LocatorScope, Observation, Provenance } from "../core/types.ts";
 import { looksSensitive } from "../policy/redact.ts";
+import { canonicalizeUrl } from "./canonical.ts";
+import { checkpointFromDelta, EMPTY_OBSERVATION } from "./checkpoint.ts";
+import {
+  CURRENT_SCHEMA_VERSION,
+  DEFAULT_RETRY_BUDGET,
+  DEFAULT_STEP_TIMEOUT_MS,
+  IRREVERSIBLE_COMPENSATION,
+  READ_ONLY_COMPENSATION,
+  VENDOR_ANTI_CHECKPOINTS,
+} from "./defaults.ts";
+import { rankedTarget, rankedTargetFrom } from "./ranked.ts";
 import { DISPUTE_EXCEPTIONS, VENDOR_EXCEPTIONS } from "./schema.ts";
 
 export type RecordedStep = {
   action: Action;
   observationBefore: Observation;
+  observationAfter?: Observation;
   usedLocatorName?: string;
   risk: "safe" | "risky";
+  row?: { headers: string[]; cells: string[] };
+  assistedBy?: string;
+};
+
+export { rankedTarget, rankedTargetFrom, promoteHits } from "./ranked.ts";
+export { checkpointFromDelta } from "./checkpoint.ts";
+
+const GENERIC_CONTROL = /^(open|select|view|choose|details|open row)$/i;
+const ROW_HEADER_PARAM: Record<string, string> = {
+  merchant: "merchant",
+  card: "last4",
+  "last 4": "last4",
+  "card last 4": "last4",
+  last4: "last4",
+  "member id": "memberId",
 };
 
 function toCamel(label: string): string {
@@ -17,15 +44,8 @@ function toCamel(label: string): string {
     .join("");
 }
 
-function valuesFromGoal(goal: string): string[] {
-  const quoted = [...goal.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
-  const matches = goal.match(/[A-Za-z0-9._-]{3,}/g) ?? [];
-  const tokens = matches.filter((m) => /\d/.test(m) || m.includes("-"));
-  return [...new Set([...quoted, ...tokens])];
-}
-
 function paramType(name: string, matched: string): "string" | "number" {
-  if (/id$/i.test(name)) return "string";
+  if (/id$/i.test(name) || /name|merchant|reason|last4/i.test(name)) return "string";
   return /^\d+$/.test(matched) ? "number" : "string";
 }
 
@@ -42,25 +62,83 @@ function successExpect(id: string, outputs: Record<string, string>): string {
   return "Member";
 }
 
+function budget(step: Omit<ArtifactStep, "timeoutMs" | "retryBudget">): ArtifactStep {
+  return { timeoutMs: DEFAULT_STEP_TIMEOUT_MS, retryBudget: DEFAULT_RETRY_BUDGET, ...step };
+}
+
+function ensureParam(
+  parameters: Capability["parameters"],
+  seen: Set<string>,
+  name: string,
+  value: string,
+  description: string,
+): void {
+  if (seen.has(name)) return;
+  seen.add(name);
+  parameters.push({
+    name,
+    type: paramType(name, value),
+    description,
+    sensitive: looksSensitive(name),
+  });
+}
+
+function rowScope(
+  rec: RecordedStep,
+  parameters: Capability["parameters"],
+  seen: Set<string>,
+  paramValues: Record<string, string>,
+): LocatorScope | undefined {
+  const row = rec.row;
+  if (!row || row.cells.length === 0) return undefined;
+  const name = rec.action.target?.primary.name ?? rec.usedLocatorName ?? "";
+  if (name && !GENERIC_CONTROL.test(name) && rec.action.name !== "click") return undefined;
+  const hasText: string[] = [];
+  row.headers.forEach((header, i) => {
+    const key = ROW_HEADER_PARAM[header.trim().toLowerCase()];
+    const cell = row.cells[i]?.trim() ?? "";
+    if (!key || !cell) return;
+    ensureParam(parameters, seen, key, cell, `Identifying cell from the ${header} column.`);
+    paramValues[key] = cell;
+    hasText.push(`:${key}`);
+  });
+  if (hasText.length === 0 && GENERIC_CONTROL.test(name)) {
+    const interesting = row.cells.filter((cell) => cell && !GENERIC_CONTROL.test(cell) && cell !== name);
+    if (interesting[0]) hasText.push(interesting[0]);
+    if (interesting[1]) hasText.push(interesting[1]);
+  }
+  return hasText.length > 0 ? { by: "row", hasText } : undefined;
+}
+
+function valuesFromGoal(goal: string): string[] {
+  const quoted = [...goal.matchAll(/"([^"]+)"/g)].map((m) => m[1]!);
+  const matches = goal.match(/[A-Za-z0-9._-]{3,}/g) ?? [];
+  const tokens = matches.filter((m) => /\d/.test(m) || m.includes("-"));
+  return [...new Set([...quoted, ...tokens])];
+}
+
 export function compileArtifact(input: {
   goal: string;
   targetUrl: string;
   recorded: RecordedStep[];
   outputs: Record<string, string>;
   id?: string;
+  provenance?: Partial<Provenance>;
 }): Capability {
-  const candidates = valuesFromGoal(input.goal);
   const parameters: Capability["parameters"] = [];
+  const paramValues: Record<string, string> = {};
   const steps: ArtifactStep[] = [];
   const seenParams = new Set<string>();
 
-  const navigate: ArtifactStep = {
+  const landing = input.recorded[0]?.observationBefore;
+  const navigate = budget({
     id: "s00-navigate",
     action: "navigate",
-    url: stripQuery(input.targetUrl),
+    url: canonicalizeUrl(stripQuery(input.targetUrl), paramValues),
     risk: "safe",
     note: "Entry point for this vendor console.",
-  };
+    checkpoint: landing ? checkpointFromDelta(EMPTY_OBSERVATION, landing, []) : undefined,
+  });
   steps.push(navigate);
 
   input.recorded.forEach((rec, index) => {
@@ -69,22 +147,18 @@ export function compileArtifact(input: {
     let value = rec.action.value;
 
     if ((rec.action.name === "type" || rec.action.name === "select") && value) {
-      const matched = candidates.find((c) => c === value);
-      if (matched) {
-        const field = rec.action.target?.primary.name ?? rec.usedLocatorName ?? "value";
-        const name = toCamel(field);
-        if (!seenParams.has(name)) {
-          seenParams.add(name);
-          parameters.push({
-            name,
-            type: paramType(name, matched),
-            description: `Value typed into ${field} during discovery.`,
-            sensitive: looksSensitive(name),
-          });
-        }
-        inputFrom = `parameters.${name}`;
-        value = undefined;
-      }
+      const field = rec.action.target?.primary.name ?? rec.usedLocatorName ?? "value";
+      const name = toCamel(field);
+      ensureParam(
+        parameters,
+        seenParams,
+        name,
+        value,
+        `Value ${rec.action.name === "select" ? "selected in" : "typed into"} ${field} during discovery.`,
+      );
+      paramValues[name] = value;
+      inputFrom = `parameters.${name}`;
+      value = undefined;
     }
 
     if (rec.action.name === "extract" && rec.action.target?.primary.role === "button") {
@@ -95,42 +169,77 @@ export function compileArtifact(input: {
       rec.action.name === "extract" &&
       steps.at(-1)?.action === "extract" &&
       steps.at(-1)?.outputName === rec.action.outputName &&
-      JSON.stringify(steps.at(-1)?.target) === JSON.stringify(rec.action.target)
+      JSON.stringify(rankedTargetFrom(steps.at(-1)?.target)) === JSON.stringify(rankedTargetFrom(rec.action.target))
     ) {
       return;
     }
 
-    steps.push({
-      id,
-      action: rec.action.name,
-      target: rec.action.target,
-      value,
-      inputFrom,
-      url: rec.action.url,
-      outputName: rec.action.outputName,
-      risk: rec.risk,
-    });
+    const scope = rowScope(rec, parameters, seenParams, paramValues);
+    const target = rankedTargetFrom(
+      rec.action.target
+        ? {
+            ...rec.action.target,
+            primary: { ...rec.action.target.primary, scope: rec.action.target.primary.scope ?? scope },
+          }
+        : rec.action.target,
+    );
+
+    const avoid = [...new Set([...Object.values(paramValues), ...valuesFromGoal(input.goal)])];
+    const checkpoint = rec.observationAfter
+      ? checkpointFromDelta(rec.observationBefore, rec.observationAfter, avoid, paramValues)
+      : undefined;
+
+    steps.push(
+      budget({
+        id,
+        action: rec.action.name,
+        target,
+        value,
+        inputFrom,
+        url: rec.action.url ? canonicalizeUrl(rec.action.url, paramValues) : undefined,
+        outputName: rec.action.outputName,
+        risk: rec.risk,
+        checkpoint,
+        assistedBy: rec.assistedBy,
+      }),
+    );
   });
+
+  for (const step of steps) {
+    if (step.url) step.url = canonicalizeUrl(step.url, paramValues);
+  }
+
+  const avoid = [...new Set([...Object.values(paramValues), ...valuesFromGoal(input.goal)])];
+  if (navigate.checkpoint && landing) {
+    navigate.checkpoint = checkpointFromDelta(EMPTY_OBSERVATION, landing, avoid, paramValues);
+  }
 
   const outputs: Capability["outputs"] = Object.keys(input.outputs).map((name) => {
     const extractStep = [...input.recorded].reverse().find((r) => r.action.outputName === name);
+    const type = /balance|amount|money/i.test(name) ? ("money" as const) : ("string" as const);
     return {
       name,
-      type: /balance|amount|money/i.test(name) ? ("money" as const) : ("string" as const),
-      locator:
-        extractStep?.action.target ?? {
-          primary: { by: "role" as const, role: "cell", name: name },
-        },
+      type,
+      locator: rankedTargetFrom(extractStep?.action.target) ?? rankedTarget("cell", name),
+      pii: true,
     };
   });
 
   const id = input.id ?? inferId(input.goal);
+  const risky = steps.some((s) => s.risk === "risky");
+  const entryCheckpoint =
+    navigate.checkpoint ??
+    steps.find((s) => s.checkpoint)?.checkpoint ?? {
+      kind: "textIncludes" as const,
+      expect: "Member Lookup",
+    };
 
   return {
-    schemaVersion: "1.0",
+    schemaVersion: CURRENT_SCHEMA_VERSION,
     id,
     name: humanize(id),
-    description: input.goal,
+    description: humanize(id),
+    auth: { credentialRef: "vault://tenant-9/teller" },
     version: 1,
     app: {
       vendorId: "relay-core",
@@ -138,8 +247,30 @@ export function compileArtifact(input: {
     },
     parameters,
     outputs,
+    sideEffects: {
+      kind: risky ? "irreversible" : "none",
+      compensation: risky ? IRREVERSIBLE_COMPENSATION : READ_ONLY_COMPENSATION,
+    },
+    preconditions: {
+      requiresSession: true,
+      requiresRole: "teller",
+      entryCheckpoint,
+    },
+    uses: [],
+    provenance: {
+      discoveredAt: input.provenance?.discoveredAt ?? new Date().toISOString(),
+      discoveredBy: input.provenance?.discoveredBy ?? "model",
+      model: input.provenance?.model,
+      promptHash: input.provenance?.promptHash,
+      evidenceRunId: input.provenance?.evidenceRunId,
+      goal: input.provenance?.goal ?? input.goal,
+      assistedBy:
+        input.provenance?.assistedBy ?? input.recorded.find((rec) => rec.assistedBy)?.assistedBy,
+    },
+    idempotencyKeyFrom: risky ? parameters.map((p) => p.name) : undefined,
     steps,
     exceptionalStates: exceptionsFor(id, input.goal),
+    antiCheckpoints: VENDOR_ANTI_CHECKPOINTS,
     success: {
       checkpoint: {
         kind: "textIncludes",
@@ -165,7 +296,7 @@ function inferId(goal: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 48);
+    .slice(0, 45);
   return slug || "capability";
 }
 
@@ -176,273 +307,3 @@ function humanize(id: string): string {
     .map((w) => w[0]!.toUpperCase() + w.slice(1))
     .join(" ");
 }
-
-export const LOOKUP_MEMBER_SAVINGS: Capability = {
-  schemaVersion: "1.0",
-  id: "lookup-member-savings",
-  name: "Lookup Member Savings Balance",
-  description: "Look up a member by ID and read their current savings balance.",
-  version: 1,
-  app: { vendorId: "relay-core", surfaceKind: "legacy-web" },
-  parameters: [
-    {
-      name: "memberId",
-      type: "string",
-      description: "Member number supplied per invocation.",
-      sensitive: false,
-    },
-  ],
-  outputs: [
-    {
-      name: "savingsBalance",
-      type: "money",
-      description: "Current savings balance displayed on the member record.",
-      locator: { primary: { by: "role", role: "cell", name: "Savings Balance" } },
-    },
-  ],
-  steps: [
-    {
-      id: "s00-navigate",
-      action: "navigate",
-      url: "http://127.0.0.1:3000/",
-      risk: "safe",
-    },
-    {
-      id: "s01-type",
-      action: "type",
-      target: {
-        primary: { by: "role", role: "textbox", name: "Member ID" },
-        fallbacks: [{ by: "label", name: "Member ID" }],
-      },
-      inputFrom: "parameters.memberId",
-      risk: "safe",
-      checkpoint: { kind: "textIncludes", expect: "Member Lookup" },
-    },
-    {
-      id: "s02-click",
-      action: "click",
-      target: {
-        primary: { by: "role", role: "button", name: "Search" },
-        fallbacks: [{ by: "text", text: "Search" }],
-      },
-      risk: "safe",
-    },
-    {
-      id: "s03-extract",
-      action: "extract",
-      target: {
-        primary: { by: "role", role: "cell", name: "Savings Balance" },
-        fallbacks: [{ by: "css", selector: '[aria-label="Savings Balance"]' }],
-      },
-      outputName: "savingsBalance",
-      risk: "safe",
-      checkpoint: { kind: "textIncludes", expect: "Savings Balance" },
-    },
-  ],
-  exceptionalStates: VENDOR_EXCEPTIONS,
-  success: { checkpoint: { kind: "textIncludes", expect: "Savings Balance" } },
-};
-
-export const OPEN_SUB_ACCOUNT: Capability = {
-  schemaVersion: "1.0",
-  id: "open-sub-account",
-  name: "Open Sub-Account",
-  description: "Open a new sub-account for a member and reach the confirmation screen.",
-  version: 1,
-  app: { vendorId: "relay-core", surfaceKind: "legacy-web" },
-  parameters: [
-    { name: "memberId", type: "string", description: "Member number." },
-    { name: "product", type: "string", description: "Product to open." },
-  ],
-  outputs: [
-    {
-      name: "confirmation",
-      type: "string",
-      locator: { primary: { by: "role", role: "status", name: "Confirmation" } },
-    },
-  ],
-  steps: [
-    {
-      id: "s00-navigate",
-      action: "navigate",
-      url: "http://127.0.0.1:3000/",
-      risk: "safe",
-    },
-    {
-      id: "s01-type",
-      action: "type",
-      target: { primary: { by: "role", role: "textbox", name: "Member ID" } },
-      inputFrom: "parameters.memberId",
-      risk: "safe",
-    },
-    {
-      id: "s02-search",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Search" } },
-      risk: "safe",
-    },
-    {
-      id: "s03-open",
-      action: "click",
-      target: { primary: { by: "role", role: "link", name: "Open Sub-Account" } },
-      risk: "safe",
-      note: "Opening the form is reversible; confirmation later is not.",
-    },
-    {
-      id: "s04-product",
-      action: "select",
-      target: { primary: { by: "role", role: "combobox", name: "Product" } },
-      inputFrom: "parameters.product",
-      risk: "safe",
-    },
-    {
-      id: "s05-continue",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Continue" } },
-      risk: "safe",
-    },
-    {
-      id: "s06-confirm",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Confirm" } },
-      risk: "risky",
-      note: "Irreversible confirmation. Unattended replay requires --approve-risky.",
-    },
-    {
-      id: "s07-extract",
-      action: "extract",
-      target: { primary: { by: "role", role: "status", name: "Confirmation" } },
-      outputName: "confirmation",
-      risk: "safe",
-    },
-  ],
-  exceptionalStates: VENDOR_EXCEPTIONS,
-  success: { checkpoint: { kind: "textIncludes", expect: "Sub-account opened" } },
-};
-
-export const VERIFY_AND_FILE_DISPUTE: Capability = {
-  schemaVersion: "1.0",
-  id: "verify-and-file-dispute",
-  name: "Verify And File Dispute",
-  description: "Look up a member dispute, verify the transaction amount, and file it.",
-  version: 1,
-  app: { vendorId: "relay-core", surfaceKind: "legacy-web" },
-  parameters: [
-    { name: "memberId", type: "string", description: "Member number." },
-    { name: "disputeId", type: "string", description: "Dispute identifier on the member queue." },
-    { name: "reason", type: "string", description: "Filing reason shown on the form." },
-  ],
-  outputs: [
-    {
-      name: "transactionAmount",
-      type: "money",
-      description: "Amount displayed on the dispute detail before filing.",
-      locator: { primary: { by: "role", role: "cell", name: "Transaction Amount" } },
-    },
-    {
-      name: "confirmation",
-      type: "string",
-      description: "Confirmation text after the dispute is filed.",
-      locator: { primary: { by: "role", role: "status", name: "Confirmation" } },
-    },
-  ],
-  steps: [
-    {
-      id: "s00-navigate",
-      action: "navigate",
-      url: "http://127.0.0.1:3000/",
-      risk: "safe",
-    },
-    {
-      id: "s01-type",
-      action: "type",
-      target: {
-        primary: { by: "role", role: "textbox", name: "Member ID" },
-        fallbacks: [{ by: "label", name: "Member ID" }],
-      },
-      inputFrom: "parameters.memberId",
-      risk: "safe",
-      checkpoint: { kind: "textIncludes", expect: "Member Lookup" },
-    },
-    {
-      id: "s02-search",
-      action: "click",
-      target: {
-        primary: { by: "role", role: "button", name: "Search" },
-        fallbacks: [{ by: "text", text: "Search" }],
-      },
-      risk: "safe",
-    },
-    {
-      id: "s03-disputes",
-      action: "click",
-      target: { primary: { by: "role", role: "link", name: "Disputes" } },
-      risk: "safe",
-      checkpoint: { kind: "textIncludes", expect: "Dispute Queue" },
-    },
-    {
-      id: "s04-dispute-id",
-      action: "type",
-      target: {
-        primary: { by: "role", role: "textbox", name: "Dispute ID" },
-        fallbacks: [{ by: "label", name: "Dispute ID" }],
-      },
-      inputFrom: "parameters.disputeId",
-      risk: "safe",
-    },
-    {
-      id: "s05-open",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Open" } },
-      risk: "safe",
-    },
-    {
-      id: "s06-extract-amount",
-      action: "extract",
-      target: {
-        primary: { by: "role", role: "cell", name: "Transaction Amount" },
-        fallbacks: [{ by: "css", selector: '[aria-label="Transaction Amount"]' }],
-      },
-      outputName: "transactionAmount",
-      risk: "safe",
-      checkpoint: { kind: "textIncludes", expect: "Transaction Amount" },
-    },
-    {
-      id: "s07-file",
-      action: "click",
-      target: { primary: { by: "role", role: "link", name: "File Dispute" } },
-      risk: "safe",
-      note: "Opening the file form is reversible; confirmation later is not.",
-      checkpoint: { kind: "textIncludes", expect: "File Card Dispute" },
-    },
-    {
-      id: "s08-reason",
-      action: "select",
-      target: { primary: { by: "role", role: "combobox", name: "Reason" } },
-      inputFrom: "parameters.reason",
-      risk: "safe",
-    },
-    {
-      id: "s09-continue",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Continue" } },
-      risk: "safe",
-    },
-    {
-      id: "s10-confirm",
-      action: "click",
-      target: { primary: { by: "role", role: "button", name: "Confirm" } },
-      risk: "risky",
-      note: "Irreversible filing. Unattended replay requires --approve-risky.",
-    },
-    {
-      id: "s11-extract",
-      action: "extract",
-      target: { primary: { by: "role", role: "status", name: "Confirmation" } },
-      outputName: "confirmation",
-      risk: "safe",
-    },
-  ],
-  exceptionalStates: [...VENDOR_EXCEPTIONS, ...DISPUTE_EXCEPTIONS],
-  success: { checkpoint: { kind: "textIncludes", expect: "Dispute filed" } },
-};
