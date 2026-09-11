@@ -1,0 +1,71 @@
+{
+  "status": "business_outcome",
+  "classify": "business_outcome",
+  "code": "CARD_ALREADY_BLOCKED",
+  "message": "This card was already blocked and cannot be blocked again.",
+  "stepId": "s06-click",
+  "observed": "Relay Credit Union — Card 4412 | http://127.0.0.1:55438/member/12345/cards/4412",
+  "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "CAMS"
+      }
+    },
+    {
+      "stepId": "s04-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Card last 4"
+      }
+    },
+    {
+      "stepId": "s05-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Open by last 4"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-batch-idempotency",
+  "metrics": {
+    "durationMs": 2252,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

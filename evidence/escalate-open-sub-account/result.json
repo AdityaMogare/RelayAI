@@ -3,7 +3,10 @@
   "message": "Capability completed and success checkpoint held.",
   "idempotencyKey": "f9a8551e8459d129ad7b96b443eb2235a3e9e6f6f986d5228c19f77a56ef7994",
   "outputs": {
-    "savingsBalance": "[REDACTED-PII]",
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    },
     "confirmation": "[REDACTED-PII]"
   },
   "locatorHits": [
@@ -90,5 +93,12 @@
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account",
+  "metrics": {
+    "durationMs": 3637,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

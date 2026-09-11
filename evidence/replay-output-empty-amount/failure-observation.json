@@ -1,9 +1,8 @@
 {
-  "url": "http://127.0.0.1:51387/member/12345/disputes/DSP-1003",
+  "url": "http://127.0.0.1:55438/member/12345/disputes/DSP-1003",
   "title": "Relay Credit Union — Dispute DSP-1003",
-  "refs": [
+  "controls": [
     {
-      "ref": "r7",
       "role": "link",
       "name": "File Dispute"
     }

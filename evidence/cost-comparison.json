@@ -1,0 +1,53 @@
+{
+  "note": "Live discovery logs from these folders did not record token usage. Cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Durations are wall-clock from the committed traces.",
+  "table": [
+    "discovery      gpt-4o     38445.5s    13 model calls   $0.09",
+    "replay         none       4.3s     0 model calls   $0.00      9018.4× faster, 100% cheaper",
+    "replay ×50     none       76.3s     0 model calls   $0.00      50/50 success, 0% fallbacks"
+  ],
+  "rows": [
+    {
+      "path": "discovery",
+      "model": "gpt-4o",
+      "scenario": "verify-and-file-dispute",
+      "durationMs": 38445456,
+      "modelCalls": 13,
+      "estimatedCostUsd": 0.0871
+    },
+    {
+      "path": "discovery",
+      "model": "gpt-4o",
+      "scenario": "lookup-member-savings",
+      "durationMs": 39584170,
+      "modelCalls": 5,
+      "estimatedCostUsd": 0.0335
+    },
+    {
+      "path": "replay",
+      "model": "none",
+      "scenario": "verify-and-file-dispute",
+      "durationMs": 4263,
+      "modelCalls": 0,
+      "estimatedCostUsd": 0
+    },
+    {
+      "path": "replay",
+      "model": "none",
+      "scenario": "lookup-member-savings",
+      "durationMs": 1655,
+      "modelCalls": 0,
+      "estimatedCostUsd": 0
+    },
+    {
+      "path": "replay ×50",
+      "model": "none",
+      "scenario": "lookup-member-savings",
+      "durationMs": 76337,
+      "modelCalls": 0,
+      "estimatedCostUsd": 0,
+      "success": 50,
+      "runs": 50,
+      "fallbackRate": 0
+    }
+  ]
+}

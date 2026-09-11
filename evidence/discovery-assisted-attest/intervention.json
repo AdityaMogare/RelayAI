@@ -1,0 +1,48 @@
+{
+  "reason": "Discovery wants a risky action: Confirm",
+  "goal": "Jane Doe called about an unauthorized charge from ACME POS on her card ending 4412. Find that transaction, verify the amount, and file it as Unauthorized.",
+  "url": "http://127.0.0.1:55438/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/discovery-assisted-attest/risky.png",
+  "id": "48f38131-28f4-4a06-875a-ede37ec9b5c4",
+  "createdAt": "2026-09-11T18:25:09.066Z",
+  "sessionId": "427625c2-317a-4997-ad06-076de6529d0d",
+  "state": "returned",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-11T18:27:09.066Z",
+  "queuePriority": 40,
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/member/12345/disputes/DSP-1001/file"
+  },
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-11T18:25:09.066Z",
+      "note": "Discovery wants a risky action: Confirm"
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-11T18:25:09.236Z",
+      "operatorId": "teller01",
+      "note": "teller01 claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-11T18:25:09.256Z",
+      "operatorId": "teller01",
+      "note": "teller01 in_control"
+    },
+    {
+      "state": "returned",
+      "at": "2026-09-11T18:25:09.548Z",
+      "operatorId": "teller01",
+      "note": "teller01 completed the risky step on the live session"
+    }
+  ],
+  "operatorId": "teller01",
+  "stepDisposition": "completed_by_human",
+  "claimedAt": "2026-09-11T18:25:09.236Z",
+  "operatorKind": "scripted",
+  "inControlAt": "2026-09-11T18:25:09.256Z",
+  "returnedAt": "2026-09-11T18:25:09.548Z"
+}

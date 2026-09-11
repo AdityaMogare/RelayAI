@@ -1,0 +1,32 @@
+{
+  "status": "failed",
+  "classify": "hard_failure",
+  "code": "POLICY_VIOLATION",
+  "stepId": "s01-wire",
+  "expected": "policy allowlist",
+  "observed": "/admin/wire",
+  "message": "policy blocked /admin/wire",
+  "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-wire",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Wire Transfer"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/policy-blocked-admin-wire",
+  "metrics": {
+    "durationMs": 846,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

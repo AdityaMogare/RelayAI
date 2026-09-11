@@ -1,0 +1,16 @@
+{
+  "url": "http://127.0.0.1:55438/member/12345/cards/3301",
+  "title": "Relay Credit Union — Card 3301",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-batch-business-account/handoff-after.png",
+  "ariaDiff": {
+    "added": [
+      "- status: Live Relay session b18568ef-b705-4d08-b907-4b2ecbd85a3a — this is the paused teller window, not a new login."
+    ],
+    "removed": []
+  },
+  "sessionId": "b18568ef-b705-4d08-b907-4b2ecbd85a3a",
+  "stepDisposition": "not_done",
+  "stepCompletedByHuman": false,
+  "operatorId": "ci-bot",
+  "audit": "operator ci-bot (scripted) took control at 2026-09-11T18:31:29.361Z and returned it at 2026-09-11T18:31:29.362Z"
+}

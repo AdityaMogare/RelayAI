@@ -1,0 +1,83 @@
+{
+  "status": "business_outcome",
+  "classify": "business_outcome",
+  "code": "DISPUTE_ALREADY_FILED",
+  "message": "This dispute was already submitted and cannot be filed again.",
+  "stepId": "s06-extract-amount",
+  "observed": "Relay Credit Union — Dispute DSP-1001 | http://127.0.0.1:55438/member/12345/disputes/DSP-1001",
+  "outputs": {
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
+  },
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Savings Balance"
+      }
+    },
+    {
+      "stepId": "s03-disputes",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Disputes"
+      }
+    },
+    {
+      "stepId": "s04-open-row",
+      "rank": 0,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Open",
+        "scope": {
+          "by": "row",
+          "hasText": [
+            "ACME POS",
+            "4412"
+          ]
+        }
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 0.8,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-already-filed",
+  "metrics": {
+    "durationMs": 2732,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

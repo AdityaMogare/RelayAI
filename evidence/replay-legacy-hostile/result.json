@@ -1,0 +1,43 @@
+{
+  "status": "failed",
+  "classify": "hard_failure",
+  "code": "CHECKPOINT_FAILED",
+  "stepId": "s02-click",
+  "expected": "urlIncludes \"/member\"",
+  "observed": "Relay Credit Union — Member Servicing | http://127.0.0.1:55438/?legacy=1 | Member ID, Search, Open Sub-Account, Disputes, Open, Last Name",
+  "message": "Step s02-click failed.",
+  "ambiguous": false,
+  "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-legacy-hostile",
+  "metrics": {
+    "durationMs": 1358,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

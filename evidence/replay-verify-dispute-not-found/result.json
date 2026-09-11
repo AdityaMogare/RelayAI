@@ -2,11 +2,14 @@
   "status": "business_outcome",
   "classify": "business_outcome",
   "code": "DISPUTE_NOT_FOUND",
-  "message": "No dispute matches the supplied ID for this member.",
-  "stepId": "s06-extract-amount",
-  "observed": "Relay Credit Union — Dispute not found | http://127.0.0.1:51387/member/12345/disputes/DSP-9999 | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nDispute not found\n\nNo dispute DSP-9999 exists for member 12345.\n\nBack to Dispute Queue",
+  "message": "No queue row matched merchant + last4 for this member.",
+  "stepId": "s04-open-row",
+  "observed": "Relay Credit Union — Dispute Queue | http://127.0.0.1:55438/member/12345/disputes | Dispute ID, Open, Open by ID",
   "outputs": {
-    "savingsBalance": "[REDACTED-PII]"
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
   },
   "locatorHits": [
     {
@@ -48,29 +51,16 @@
         "role": "link",
         "name": "Disputes"
       }
-    },
-    {
-      "stepId": "s04-dispute-id",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "textbox",
-        "name": "Dispute ID"
-      }
-    },
-    {
-      "stepId": "s05-open",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "button",
-        "name": "Open"
-      }
     }
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-not-found"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-not-found",
+  "metrics": {
+    "durationMs": 2512,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

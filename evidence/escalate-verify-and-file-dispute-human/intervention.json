@@ -1,0 +1,57 @@
+{
+  "reason": "Risky/irreversible step requires human approval.",
+  "capabilityId": "verify-and-file-dispute",
+  "stepId": "s10-confirm",
+  "url": "http://127.0.0.1:55438/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute-human/escalate-s10-confirm.png",
+  "checkpointExpect": "textIncludes \"Dispute filed\"",
+  "sessionId": "6286388e-05a7-4758-91c0-23d0b29d96e7",
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/member/12345/disputes/DSP-1001/file"
+  },
+  "id": "b23908b0-98bc-4c51-b5f6-279975c27f8a",
+  "createdAt": "2026-09-11T18:26:55.368Z",
+  "state": "resolved",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-11T18:28:55.368Z",
+  "queuePriority": 10,
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-11T18:26:55.368Z",
+      "note": "Risky/irreversible step requires human approval."
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-11T18:26:55.528Z",
+      "operatorId": "teller01",
+      "note": "teller01 claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-11T18:26:55.528Z",
+      "operatorId": "teller01",
+      "note": "teller01 in_control"
+    },
+    {
+      "state": "returned",
+      "at": "2026-09-11T18:26:55.675Z",
+      "operatorId": "teller01",
+      "note": "teller01 completed the risky step on the live session"
+    },
+    {
+      "state": "resolved",
+      "at": "2026-09-11T18:26:55.967Z",
+      "operatorId": "teller01",
+      "note": "risky step skipped after human handback"
+    }
+  ],
+  "operatorId": "teller01",
+  "stepDisposition": "completed_by_human",
+  "claimedAt": "2026-09-11T18:26:55.528Z",
+  "operatorKind": "scripted",
+  "inControlAt": "2026-09-11T18:26:55.528Z",
+  "returnedAt": "2026-09-11T18:26:55.675Z",
+  "resolvedAt": "2026-09-11T18:26:55.967Z"
+}

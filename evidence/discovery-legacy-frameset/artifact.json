@@ -1,0 +1,252 @@
+{
+  "schemaVersion": "1.1",
+  "id": "lookup-member-savings-frameset",
+  "name": "Lookup Member Savings Frameset",
+  "description": "Lookup Member Savings Frameset",
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
+  "version": 1,
+  "app": {
+    "vendorId": "relay-core",
+    "surfaceKind": "legacy-web"
+  },
+  "parameters": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "description": "Value typed into Member ID during discovery.",
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "savingsBalance",
+      "type": "money",
+      "locator": {
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Savings Balance"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Savings Balance"
+          },
+          {
+            "by": "text"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Savings Balance\"]"
+          }
+        ]
+      },
+      "pii": true
+    }
+  ],
+  "sideEffects": {
+    "kind": "none",
+    "compensation": "Nothing to undo; this capability only reads."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "titleIncludes",
+      "expect": "Relay Credit Union — Member Servicing"
+    }
+  },
+  "uses": [],
+  "provenance": {
+    "discoveredAt": "2026-09-11T18:25:01.211Z",
+    "discoveredBy": "human",
+    "model": "scripted",
+    "promptHash": "6e432be36ada62a48aee3b7852fe0a490e6db7650ed03b37a89467e595e4baf2",
+    "evidenceRunId": "discovery-legacy-frameset",
+    "goal": "Look up member 12345 and read their current savings balance"
+  },
+  "steps": [
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s00-navigate",
+      "action": "navigate",
+      "url": "http://127.0.0.1:55438/",
+      "risk": "safe",
+      "note": "Entry point for this vendor console.",
+      "checkpoint": {
+        "kind": "titleIncludes",
+        "expect": "Relay Credit Union — Member Servicing"
+      }
+    },
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s01-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Member ID"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Member ID"
+          },
+          {
+            "by": "text"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Member ID\"]"
+          }
+        ]
+      },
+      "inputFrom": "parameters.memberId",
+      "risk": "safe"
+    },
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s02-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Search"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Search"
+          },
+          {
+            "by": "text"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Search\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "textIncludes",
+        "expect": "CAMS"
+      }
+    },
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s03-extract",
+      "action": "extract",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "cell",
+          "name": "Savings Balance"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Savings Balance"
+          },
+          {
+            "by": "text"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Savings Balance\"]"
+          }
+        ]
+      },
+      "outputName": "savingsBalance",
+      "risk": "safe"
+    }
+  ],
+  "exceptionalStates": [
+    {
+      "detect": {
+        "textIncludes": "Member not found"
+      },
+      "classify": "business_outcome",
+      "code": "MEMBER_NOT_FOUND",
+      "message": "No member record matches the supplied ID."
+    },
+    {
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
+      "classify": "business_outcome",
+      "code": "PERMISSION_DENIED",
+      "message": "The operator is not authorized to view this member."
+    },
+    {
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The form rejected the input."
+    },
+    {
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
+      "classify": "recoverable",
+      "code": "SYSTEM_NOTICE",
+      "message": "A known interstitial is blocking the work area.",
+      "recoverAction": {
+        "action": "dismiss",
+        "target": {
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
+        }
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Session expired"
+      },
+      "classify": "needs_human",
+      "code": "SESSION_EXPIRED",
+      "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
+    }
+  ],
+  "success": {
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Savings Balance"
+    }
+  }
+}

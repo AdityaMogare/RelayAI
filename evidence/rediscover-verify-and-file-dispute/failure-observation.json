@@ -1,0 +1,14 @@
+{
+  "url": "http://127.0.0.1:55464/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
+  "title": "Relay Credit Union — Confirm Dispute Filing",
+  "controls": [
+    {
+      "role": "button",
+      "name": "Confirm"
+    },
+    {
+      "role": "button",
+      "name": "Confirm Filing"
+    }
+  ]
+}

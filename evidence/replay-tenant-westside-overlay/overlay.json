@@ -1,0 +1,70 @@
+{
+  "order": [
+    {
+      "layer": "base",
+      "id": "lookup-member-savings"
+    },
+    {
+      "layer": "vendor",
+      "id": "relay-core",
+      "path": "/Users/adityamogare/RelayAI/overlays/vendors/relay-core.yaml"
+    },
+    {
+      "layer": "tenant",
+      "id": "westside",
+      "path": "/Users/adityamogare/RelayAI/overlays/tenants/westside.yaml"
+    },
+    {
+      "layer": "run",
+      "id": "westside"
+    }
+  ],
+  "copy": {
+    "Search": "Find Member",
+    "Member Lookup": "Find a Member",
+    "Disputes": "Card Claims",
+    "Confirm": "Submit Request"
+  },
+  "overrides": [
+    {
+      "layer": "vendor",
+      "kind": "antiCheckpoint",
+      "detail": "textIncludes Core upgrade in progress"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Search",
+      "to": "Find Member"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Member Lookup",
+      "to": "Find a Member"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Disputes",
+      "to": "Card Claims"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Confirm",
+      "to": "Submit Request"
+    },
+    {
+      "layer": "tenant",
+      "kind": "detector",
+      "detail": "BRANCH_VERIFICATION: Branch Verification"
+    },
+    {
+      "layer": "run",
+      "kind": "baseUrl",
+      "to": "http://127.0.0.1:55474"
+    }
+  ],
+  "baseUrl": "http://127.0.0.1:55474"
+}

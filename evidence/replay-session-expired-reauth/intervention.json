@@ -1,0 +1,56 @@
+{
+  "reason": "The teller session expired and cannot continue safely.",
+  "capabilityId": "lookup-member-savings",
+  "stepId": "s02-click",
+  "url": "http://127.0.0.1:55438/search?expireMid=1&mid=12345&last=",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/replay-session-expired-reauth/escalate-s02-click.png",
+  "sessionId": "4f8e74ee-8517-42d5-af36-2baf7f1ed3fd",
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/search"
+  },
+  "id": "3cf5f02c-0a56-4a85-927d-2898f5056832",
+  "createdAt": "2026-09-11T18:25:30.134Z",
+  "state": "resolved",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-11T18:27:30.134Z",
+  "queuePriority": 40,
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-11T18:25:30.134Z",
+      "note": "The teller session expired and cannot continue safely."
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-11T18:25:30.277Z",
+      "operatorId": "teller01",
+      "note": "teller01 claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-11T18:25:30.277Z",
+      "operatorId": "teller01",
+      "note": "teller01 in_control"
+    },
+    {
+      "state": "returned",
+      "at": "2026-09-11T18:25:30.403Z",
+      "operatorId": "teller01",
+      "note": "teller01 completed the risky step on the live session"
+    },
+    {
+      "state": "resolved",
+      "at": "2026-09-11T18:25:30.569Z",
+      "operatorId": "teller01",
+      "note": "session restored by operator"
+    }
+  ],
+  "operatorId": "teller01",
+  "stepDisposition": "completed_by_human",
+  "claimedAt": "2026-09-11T18:25:30.277Z",
+  "operatorKind": "scripted",
+  "inControlAt": "2026-09-11T18:25:30.277Z",
+  "returnedAt": "2026-09-11T18:25:30.403Z",
+  "resolvedAt": "2026-09-11T18:25:30.569Z"
+}

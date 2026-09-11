@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "message": "Capability completed and success checkpoint held.",
+  "outputs": {
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
+  },
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Savings Balance"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-drift-rediscovery",
+  "metrics": {
+    "durationMs": 1531,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

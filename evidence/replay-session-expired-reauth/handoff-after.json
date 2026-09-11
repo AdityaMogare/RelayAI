@@ -1,0 +1,43 @@
+{
+  "url": "http://127.0.0.1:55438/",
+  "title": "Relay Credit Union — Member Servicing",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/replay-session-expired-reauth/handoff-after.png",
+  "ariaDiff": {
+    "added": [
+      "    - row \"Rate board Member Lookup Member ID Last Name ID or name Search Help\":",
+      "      - cell \"Rate board Member Lookup Member ID Last Name ID or name Search Help\":",
+      "            - row \"Member Lookup Member ID Last Name ID or name Search Help\":",
+      "              - cell \"Member Lookup Member ID Last Name ID or name Search Help\":",
+      "                - paragraph: Member Lookup",
+      "                - table:",
+      "                  - rowgroup:",
+      "                    - row \"Member ID\":",
+      "                      - cell \"Member ID\"",
+      "                      - cell:",
+      "                        - textbox \"Member ID\"",
+      "                    - row \"Last Name\":",
+      "                      - cell \"Last Name\"",
+      "                        - textbox \"Last Name\"",
+      "                    - row \"ID or name\":",
+      "                      - cell \"ID or name\"",
+      "                    - row \"Search Help\":",
+      "                      - cell \"Search Help\":",
+      "                        - button \"Search\"",
+      "                        - button \"Help\""
+    ],
+    "removed": [
+      "    - row \"Rate board Your teller session has timed out. Sign in again to continue. Sign In\":",
+      "      - cell \"Rate board Your teller session has timed out. Sign in again to continue. Sign In\":",
+      "            - row \"Your teller session has timed out. Sign in again to continue. Sign In\":",
+      "              - cell \"Your teller session has timed out. Sign in again to continue. Sign In\":",
+      "                - alert: Session expired",
+      "                - paragraph: Your teller session has timed out. Sign in again to continue.",
+      "                - button \"Sign In\""
+    ]
+  },
+  "sessionId": "4f8e74ee-8517-42d5-af36-2baf7f1ed3fd",
+  "stepDisposition": "completed_by_human",
+  "stepCompletedByHuman": true,
+  "operatorId": "teller01",
+  "audit": "operator teller01 (scripted) took control at 2026-09-11T18:25:30.277Z and returned it at 2026-09-11T18:25:30.403Z"
+}

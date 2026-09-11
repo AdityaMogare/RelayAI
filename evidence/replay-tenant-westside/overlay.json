@@ -1,0 +1,58 @@
+{
+  "order": [
+    {
+      "layer": "base",
+      "id": "lookup-member-savings"
+    },
+    {
+      "layer": "vendor",
+      "id": "relay-core",
+      "path": "/Users/adityamogare/RelayAI/overlays/vendors/relay-core.yaml"
+    },
+    {
+      "layer": "tenant",
+      "id": "tenant-14",
+      "path": "/Users/adityamogare/RelayAI/overlays/tenants/tenant-14.yaml"
+    },
+    {
+      "layer": "run",
+      "id": "tenant-14"
+    }
+  ],
+  "copy": {
+    "Search": "Find Member",
+    "Member Lookup": "Find a Member",
+    "Confirm": "Submit Request"
+  },
+  "overrides": [
+    {
+      "layer": "vendor",
+      "kind": "antiCheckpoint",
+      "detail": "textIncludes Core upgrade in progress"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Search",
+      "to": "Find Member"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Member Lookup",
+      "to": "Find a Member"
+    },
+    {
+      "layer": "tenant",
+      "kind": "copy",
+      "from": "Confirm",
+      "to": "Submit Request"
+    },
+    {
+      "layer": "run",
+      "kind": "baseUrl",
+      "to": "http://127.0.0.1:55477"
+    }
+  ],
+  "baseUrl": "http://127.0.0.1:55477"
+}

@@ -1,0 +1,30 @@
+{
+  "url": "http://127.0.0.1:55438/?legacy=1",
+  "title": "Relay Credit Union — Member Servicing",
+  "controls": [
+    {
+      "role": "textbox",
+      "name": "Member ID"
+    },
+    {
+      "role": "button",
+      "name": "Search"
+    },
+    {
+      "role": "link",
+      "name": "Open Sub-Account"
+    },
+    {
+      "role": "link",
+      "name": "Disputes"
+    },
+    {
+      "role": "link",
+      "name": "Open"
+    },
+    {
+      "role": "textbox",
+      "name": "Last Name"
+    }
+  ]
+}

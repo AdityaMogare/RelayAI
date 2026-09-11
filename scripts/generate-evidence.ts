@@ -1,5 +1,6 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync, existsSync, copyFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, copyFileSync, cpSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { FileArtifactStore, MemoryArtifactStore } from "../src/artifact/store.ts";
 import { promoteHits, rankedTarget } from "../src/artifact/ranked.ts";
@@ -13,12 +14,13 @@ import { WebSurface } from "../src/surfaces/web.ts";
 import { startConsole } from "../apps/bank-console/server.ts";
 import { CU_WEST_SKIN, WESTSIDE_DRIFT_SKIN, WESTSIDE_SKIN } from "../apps/bank-console/skins.ts";
 import { DiscoveryAgent } from "../src/agent/discover.ts";
+import { rediscover } from "../src/agent/rediscover.ts";
 import { ScriptedLlm } from "../src/agent/providers.ts";
 import { JANE_DOE_DISPUTE_GOAL, scriptedAssistedDiscovery, scriptedLookup, scriptedLookupStuckHelp } from "../src/agent/scripts.ts";
 import { compileArtifact } from "../src/artifact/compile.ts";
 import { equivalentSteps } from "../src/artifact/equivalent.ts";
 import { bindTenant } from "../src/overlay/store.ts";
-import { costUsd } from "../src/agent/cost.ts";
+import { costUsd, formatMetrics } from "../src/agent/cost.ts";
 import { loadRuntime, MemoryInvocationStore, RateLimiter } from "../src/policy/runtime.ts";
 
 const ROOT = resolve(process.cwd(), "evidence");
@@ -31,7 +33,11 @@ function reset(runId: string): EvidenceStore {
   return new EvidenceStore(runId, ROOT);
 }
 
+let sharedConsole: Awaited<ReturnType<typeof startConsole>> | undefined;
+
+/** Every live scenario starts from a fresh console. Do not inherit filings from the previous block. */
 async function withSurface<T>(fn: (surface: WebSurface) => Promise<T>): Promise<T> {
+  sharedConsole?.reset();
   const surface = new WebSurface();
   await surface.launch();
   try {
@@ -205,6 +211,7 @@ function stampDiscoveryHash(runId: string, capabilityPath: string, contentHash: 
 }
 
 const consoleServer = await startConsole(0);
+sharedConsole = consoleServer;
 const baseUrl = consoleServer.origin;
 console.log(`console ${baseUrl}`);
 
@@ -260,7 +267,6 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("escalate-verify-and-file-dispute");
-    consoleServer.reset();
     const control = new ControlPlane(
       surface,
       evidence,
@@ -295,7 +301,6 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("replay-verify-dispute-success");
-    consoleServer.reset();
     disputeReplay = await new ReplayEngine(surface, evidence).run(dispute.capability, {
       inputs: { memberId: "12345", merchant: "ACME POS", last4: "4412", reason: "Unauthorized" },
       baseUrl,
@@ -308,6 +313,18 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("replay-verify-dispute-already-filed");
+    // Explicit setup: this scenario needs a real DSP-1001 write, not leftover state from success.
+    const seed = new EvidenceStore("seed-already-filed", mkdtempSync(join(tmpdir(), "relay-seed-")));
+    const filed = await new ReplayEngine(surface, seed).run(dispute.capability, {
+      inputs: { memberId: "12345", merchant: "ACME POS", last4: "4412", reason: "Unauthorized" },
+      baseUrl,
+      approveRisky: true,
+      artifactPath: dispute.path,
+      contentHash: dispute.contentHash,
+    });
+    if (filed.status !== "success") {
+      throw new Error(`already-filed setup expected success, got ${filed.status}/${filed.code}`);
+    }
     const result = await new ReplayEngine(surface, evidence).run(dispute.capability, {
       inputs: { memberId: "12345", merchant: "ACME POS", last4: "4412", reason: "Unauthorized" },
       baseUrl,
@@ -440,11 +457,13 @@ try {
       surface,
       evidence,
       humanCompletesRiskyStep("teller01", async () => {
+        const seen = await surface.observe();
+        const name = seen.refs.some((ref) => ref.name === "I attest") ? "I attest" : "Confirm";
         const clicked = await surface.actAsHuman({
           name: "click",
-          target: { primary: { by: "role", role: "button", name: "I attest" } },
+          target: { primary: { by: "role", role: "button", name } },
         });
-        if (!clicked.ok) throw new Error(clicked.error ?? "operator I attest failed");
+        if (!clicked.ok) throw new Error(clicked.error ?? `operator ${name} failed`);
       }),
     );
     const agent = new DiscoveryAgent(surface, new ScriptedLlm(scriptedAssistedDiscovery()), store, evidence);
@@ -719,7 +738,6 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("escalate-verify-and-file-dispute-human");
-    consoleServer.reset();
     const control = new ControlPlane(
       surface,
       evidence,
@@ -808,8 +826,8 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("replay-batch-idempotency");
-    consoleServer.reset();
     const engine = new ReplayEngine(surface, evidence);
+    // Explicit setup: first write is this scenario's seed; the second invoke is the uniqueness proof.
     const first = await engine.run(card.capability, {
       inputs: cardInputs,
       baseUrl,
@@ -839,7 +857,6 @@ try {
 
   await withSurface(async (surface) => {
     const evidence = reset("escalate-batch-business-account");
-    consoleServer.reset();
     const control = new ControlPlane(surface, evidence, immediateResume("auto-resume"));
     const result = await new ReplayEngine(surface, evidence).run(card.capability, {
       inputs: { memberId: "12345", last4: "3301" },

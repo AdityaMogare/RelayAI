@@ -1,11 +1,10 @@
 {
-  "url": "http://127.0.0.1:51387/?expired=1",
+  "url": "http://127.0.0.1:55438/?expired=1",
   "title": "Relay Credit Union — Session expired",
-  "refs": [
+  "controls": [
     {
-      "ref": "r1",
-      "role": "link",
-      "name": "Search"
+      "role": "button",
+      "name": "Sign In"
     }
   ]
 }

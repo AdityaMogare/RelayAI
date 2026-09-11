@@ -1,0 +1,222 @@
+{
+  "capabilityId": "lookup-member-savings",
+  "runs": 50,
+  "success": 50,
+  "business_outcome": 0,
+  "escalated": 0,
+  "failed": 0,
+  "invalid_input": 0,
+  "dry_run": 0,
+  "needs_human": 0,
+  "rate": 1,
+  "fallbackRate": 0,
+  "p50DurationMs": 1513,
+  "p95DurationMs": 1651,
+  "durationsMs": [
+    1429,
+    1470,
+    1504,
+    1502,
+    1651,
+    1526,
+    1503,
+    1476,
+    1508,
+    1604,
+    1523,
+    1522,
+    1522,
+    1523,
+    1491,
+    1545,
+    1544,
+    1503,
+    1489,
+    1472,
+    1534,
+    1502,
+    1670,
+    1628,
+    1498,
+    1527,
+    1505,
+    1476,
+    1498,
+    1549,
+    1506,
+    1480,
+    1513,
+    1524,
+    1503,
+    1548,
+    1503,
+    1546,
+    1595,
+    1534,
+    1495,
+    1513,
+    1474,
+    1542,
+    1518,
+    1522,
+    1578,
+    1498,
+    1589,
+    1662
+  ],
+  "codes": {
+    "success": 50
+  },
+  "results": [
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    },
+    {
+      "status": "success"
+    }
+  ]
+}

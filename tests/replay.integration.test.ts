@@ -6,7 +6,12 @@ import { startConsole, type ConsoleServer } from "../apps/bank-console/server.ts
 import { CU_WEST_SKIN } from "../apps/bank-console/skins.ts";
 import { DiscoveryAgent } from "../src/agent/discover.ts";
 import { ScriptedLlm } from "../src/agent/providers.ts";
-import { scriptedLookup, scriptedLookupStuckHelp } from "../src/agent/scripts.ts";
+import {
+  JANE_DOE_DISPUTE_GOAL,
+  scriptedAssistedDiscovery,
+  scriptedLookup,
+  scriptedLookupStuckHelp,
+} from "../src/agent/scripts.ts";
 import { LOOKUP_MEMBER_SAVINGS, VERIFY_AND_FILE_DISPUTE } from "./fixtures.ts";
 import { ControlPlane, humanCompletesRiskyStep } from "../src/escalation/control.ts";
 import { FileArtifactStore, MemoryArtifactStore } from "../src/artifact/store.ts";
@@ -618,6 +623,47 @@ describe("coverage exhibits", () => {
       expect(out.result.status).toBe("success");
       expect(out.artifact?.provenance.assistedBy).toBe("teller01");
       expect(out.artifact?.steps.some((s) => s.assistedBy === "teller01")).toBe(true);
+    } finally {
+      await surface.close();
+    }
+  }, 45_000);
+
+  it("resumes after a supervisor attestation and stamps assistedBy", async () => {
+    const surface = new WebSurface();
+    await surface.launch();
+    const evidence = new EvidenceStore("it-assist-attest", mkdtempSync(join(tmpdir(), "relay-")));
+    const store = new MemoryArtifactStore();
+    try {
+      const control = new ControlPlane(
+        surface,
+        evidence,
+        humanCompletesRiskyStep("teller01", async () => {
+          const seen = await surface.observe();
+          const name = seen.refs.some((ref) => ref.name === "I attest") ? "I attest" : "Confirm";
+          const clicked = await surface.actAsHuman({
+            name: "click",
+            target: { primary: { by: "role", role: "button", name } },
+          });
+          if (!clicked.ok) throw new Error(clicked.error ?? `operator ${name} failed`);
+        }),
+      );
+      const out = await new DiscoveryAgent(
+        surface,
+        new ScriptedLlm(scriptedAssistedDiscovery()),
+        store,
+        evidence,
+      ).run({
+        goal: JANE_DOE_DISPUTE_GOAL,
+        targetUrl: `${consoleServer.origin}/?attest=1`,
+        capabilityId: "verify-and-file-dispute-assisted",
+        control,
+        maxSteps: 20,
+      });
+      expect(out.result.status).toBe("success");
+      expect(out.artifact?.provenance.assistedBy).toBe("teller01");
+      expect(out.artifact?.steps.some((s) => s.assistedBy === "teller01" && s.target?.primary.name === "I attest")).toBe(
+        true,
+      );
     } finally {
       await surface.close();
     }

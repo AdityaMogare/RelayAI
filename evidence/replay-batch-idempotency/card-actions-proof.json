@@ -1,0 +1,23 @@
+{
+  "assertion": "count of card actions for 12345 / 4412",
+  "note": "SQLite core ledger (node:sqlite, in-memory). This is the query a real core would run.",
+  "engine": "node:sqlite",
+  "sql": "SELECT count(*) FROM card_actions WHERE member_id='12345' AND last4='4412'",
+  "count": 1,
+  "rows": [
+    {
+      "id": 71,
+      "member_id": "12345",
+      "last4": "4412",
+      "case_number": "CASE-88001",
+      "acted_at": "2026-09-11T18:31:24.024Z"
+    }
+  ],
+  "first": {
+    "status": "success"
+  },
+  "second": {
+    "status": "business_outcome",
+    "code": "CARD_ALREADY_BLOCKED"
+  }
+}

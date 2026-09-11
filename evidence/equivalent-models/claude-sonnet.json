@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "1.1",
+  "id": "jane-doe-called-about-an-unauthorized-charge-",
+  "name": "Jane Doe Called About An Unauthorized Charge",
+  "description": "Jane Doe Called About An Unauthorized Charge",
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
+  "version": 1,
+  "app": {
+    "vendorId": "relay-core",
+    "surfaceKind": "legacy-web"
+  },
+  "parameters": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "description": "Value typed into Member ID during discovery.",
+      "sensitive": false
+    },
+    {
+      "name": "merchant",
+      "type": "string",
+      "description": "Identifying cell from the Merchant column.",
+      "sensitive": false
+    },
+    {
+      "name": "last4",
+      "type": "string",
+      "description": "Identifying cell from the Card column.",
+      "sensitive": false
+    }
+  ],
+  "outputs": [],
+  "sideEffects": {
+    "kind": "none",
+    "compensation": "Nothing to undo; this capability only reads."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "textIncludes",
+      "expect": "Member Lookup"
+    }
+  },
+  "uses": [],
+  "provenance": {
+    "discoveredAt": "2026-09-11T18:25:20.754Z",
+    "discoveredBy": "model",
+    "model": "claude-sonnet-4-20250514",
+    "goal": "Jane Doe called about an unauthorized charge from ACME POS on her card ending 4412. Find that transaction, verify the amount, and file it as Unauthorized."
+  },
+  "steps": [
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s00-navigate",
+      "action": "navigate",
+      "url": "http://127.0.0.1:3000/",
+      "risk": "safe",
+      "note": "Entry point for this vendor console."
+    },
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s01-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Member ID"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Member ID"
+          },
+          {
+            "by": "text",
+            "text": "Member ID"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Member ID\"]"
+          }
+        ]
+      },
+      "inputFrom": "parameters.memberId",
+      "risk": "safe"
+    },
+    {
+      "timeoutMs": 8000,
+      "retryBudget": 3,
+      "id": "s02-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "Open",
+          "scope": {
+            "by": "row",
+            "hasText": [
+              ":merchant",
+              ":last4"
+            ]
+          }
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Open",
+            "scope": {
+              "by": "row",
+              "hasText": [
+                ":merchant",
+                ":last4"
+              ]
+            }
+          },
+          {
+            "by": "text",
+            "text": "Open",
+            "scope": {
+              "by": "row",
+              "hasText": [
+                ":merchant",
+                ":last4"
+              ]
+            }
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Open\"]",
+            "scope": {
+              "by": "row",
+              "hasText": [
+                ":merchant",
+                ":last4"
+              ]
+            }
+          }
+        ]
+      },
+      "risk": "safe"
+    }
+  ],
+  "exceptionalStates": [
+    {
+      "detect": {
+        "textIncludes": "Member not found"
+      },
+      "classify": "business_outcome",
+      "code": "MEMBER_NOT_FOUND",
+      "message": "No member record matches the supplied ID."
+    },
+    {
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
+      "classify": "business_outcome",
+      "code": "PERMISSION_DENIED",
+      "message": "The operator is not authorized to view this member."
+    },
+    {
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The form rejected the input."
+    },
+    {
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
+      "classify": "recoverable",
+      "code": "SYSTEM_NOTICE",
+      "message": "A known interstitial is blocking the work area.",
+      "recoverAction": {
+        "action": "dismiss",
+        "target": {
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
+        }
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Session expired"
+      },
+      "classify": "needs_human",
+      "code": "SESSION_EXPIRED",
+      "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Card already blocked"
+      },
+      "classify": "business_outcome",
+      "code": "CARD_ALREADY_BLOCKED",
+      "message": "This card was already blocked and cannot be blocked again."
+    },
+    {
+      "detect": {
+        "textIncludes": "Business account — supervisor required"
+      },
+      "classify": "needs_human",
+      "code": "SUPERVISOR_REQUIRED",
+      "message": "This card sits on a business account and requires a supervisor."
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
+    }
+  ],
+  "success": {
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Member"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "outputs": {
+    "transactionAmount": "[REDACTED-PII]",
+    "confirmation": "[REDACTED-PII]"
+  },
+  "message": "Dispute filed on westside.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/rediscover-verify-and-file-dispute-2026-09-11T18-25-10-275Z",
+  "metrics": {
+    "durationMs": 4112,
+    "modelCalls": 11,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

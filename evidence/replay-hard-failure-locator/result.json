@@ -31,5 +31,12 @@
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-hard-failure-locator"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-hard-failure-locator",
+  "metrics": {
+    "durationMs": 1314,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

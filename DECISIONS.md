@@ -332,12 +332,20 @@ Status: `accepted` | `superseded` | `proposed`
 - **Decision:** `?legacy=1` is a real frameset with presentation tables, generated ids, duplicate names, and multi-match search. `DesktopSurface` replays lookup against a fake a11y tree.
 - **Why:** The locator argument is proven when rank-1 misses and drift fires. The seam is real when a non-Playwright adapter passes the suite.
 
+## D-041 — Evidence generation is hermetic per scenario
+
+- **Date:** 2026-09-11
+- **Status:** accepted
+- **Context:** A shared console once produced a failed attest run that contradicted the REPORT: `replay-verify-dispute-already-filed` left DSP-1001 filed, and `discovery-assisted-attest` inherited that row, so Example B cited `assistedBy: "teller01"` against a `status: "failed"` folder.
+- **Decision:** `withSurface` in `scripts/generate-evidence.ts` resets the shared console before every scenario. Scenarios that need leftover state (`replay-verify-dispute-already-filed`, `replay-batch-idempotency`) set it up explicitly after that reset rather than inheriting the previous block.
+- **Why:** Scenario-order dependence is a class of bug. Resetting only the scenario that failed last time leaves the next append to hit it again.
+
 ---
 
 ## Template for the next entry
 
 ```md
-## D-041 — Title
+## D-042 — Title
 
 - **Date:** YYYY-MM-DD
 - **Status:** accepted

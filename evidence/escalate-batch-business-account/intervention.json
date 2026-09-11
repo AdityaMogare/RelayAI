@@ -1,0 +1,56 @@
+{
+  "reason": "This card sits on a business account and requires a supervisor.",
+  "capabilityId": "block-and-reissue-card",
+  "stepId": "s06-click",
+  "url": "http://127.0.0.1:55438/member/12345/cards/3301",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-batch-business-account/escalate-s06-click.png",
+  "sessionId": "b18568ef-b705-4d08-b907-4b2ecbd85a3a",
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/member/12345/cards/3301"
+  },
+  "id": "bf60e4b7-b135-4673-a64e-cb57f8a756bf",
+  "createdAt": "2026-09-11T18:31:29.214Z",
+  "state": "resolved",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-11T18:33:29.214Z",
+  "queuePriority": 40,
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-11T18:31:29.214Z",
+      "note": "This card sits on a business account and requires a supervisor."
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-11T18:31:29.361Z",
+      "operatorId": "ci-bot",
+      "note": "ci-bot claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-11T18:31:29.361Z",
+      "operatorId": "ci-bot",
+      "note": "ci-bot in_control"
+    },
+    {
+      "state": "returned",
+      "at": "2026-09-11T18:31:29.362Z",
+      "operatorId": "ci-bot",
+      "note": "auto-resume"
+    },
+    {
+      "state": "resolved",
+      "at": "2026-09-11T18:31:29.507Z",
+      "operatorId": "ci-bot",
+      "note": "auto-resume"
+    }
+  ],
+  "operatorId": "ci-bot",
+  "stepDisposition": "not_done",
+  "claimedAt": "2026-09-11T18:31:29.361Z",
+  "operatorKind": "scripted",
+  "inControlAt": "2026-09-11T18:31:29.361Z",
+  "returnedAt": "2026-09-11T18:31:29.362Z",
+  "resolvedAt": "2026-09-11T18:31:29.507Z"
+}

@@ -1,10 +1,16 @@
 {
   "status": "success",
   "message": "Capability completed and success checkpoint held.",
-  "idempotencyKey": "09c39a1c8bcc9b26cb4b8965b3ea6b4c7094d99d7ffb11912c1ab116560930e0",
+  "idempotencyKey": "692ddf71a2cfe25014f48efef067bad81528df531a30f6d7198adf7e95d6aada",
   "outputs": {
-    "savingsBalance": "[REDACTED-PII]",
-    "transactionAmount": "[REDACTED-PII]",
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    },
+    "transactionAmount": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    },
     "confirmation": "[REDACTED-PII]"
   },
   "locatorHits": [
@@ -49,23 +55,20 @@
       }
     },
     {
-      "stepId": "s04-dispute-id",
-      "rank": 1,
+      "stepId": "s04-open-row",
+      "rank": 0,
       "by": "role",
       "locator": {
         "by": "role",
-        "role": "textbox",
-        "name": "Dispute ID"
-      }
-    },
-    {
-      "stepId": "s05-open",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "button",
-        "name": "Open"
+        "role": "link",
+        "name": "Open",
+        "scope": {
+          "by": "row",
+          "hasText": [
+            "ACME POS",
+            "4412"
+          ]
+        }
       }
     },
     {
@@ -130,6 +133,13 @@
     }
   ],
   "needsRediscovery": false,
-  "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-success"
+  "confidence": 0.9090909090909091,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-verify-dispute-success",
+  "metrics": {
+    "durationMs": 4263,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

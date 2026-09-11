@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "outputs": {
+    "savingsBalance": "[REDACTED-PII]"
+  },
+  "message": "Savings balance is visible after human assistance.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/discovery-assisted-escalation",
+  "metrics": {
+    "durationMs": 3221,
+    "modelCalls": 6,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

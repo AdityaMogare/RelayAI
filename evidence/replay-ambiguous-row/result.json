@@ -1,0 +1,68 @@
+{
+  "status": "success",
+  "message": "Capability completed and success checkpoint held.",
+  "outputs": {
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
+  },
+  "locatorHits": [
+    {
+      "stepId": "s01-type-last",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Last Name"
+      }
+    },
+    {
+      "stepId": "s02-search",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-open",
+      "rank": 0,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Open",
+        "scope": {
+          "by": "row",
+          "hasText": [
+            "12345"
+          ]
+        }
+      }
+    },
+    {
+      "stepId": "s04-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Savings Balance"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 0.75,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-ambiguous-row",
+  "metrics": {
+    "durationMs": 1930,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

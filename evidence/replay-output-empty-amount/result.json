@@ -7,7 +7,10 @@
   "observed": "(empty)",
   "message": "Step s06-extract-amount checkpoint-looking screen produced an untyped or empty transactionAmount.",
   "outputs": {
-    "savingsBalance": "[REDACTED-PII]"
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
   },
   "locatorHits": [
     {
@@ -51,23 +54,20 @@
       }
     },
     {
-      "stepId": "s04-dispute-id",
-      "rank": 1,
+      "stepId": "s04-open-row",
+      "rank": 0,
       "by": "role",
       "locator": {
         "by": "role",
-        "role": "textbox",
-        "name": "Dispute ID"
-      }
-    },
-    {
-      "stepId": "s05-open",
-      "rank": 1,
-      "by": "role",
-      "locator": {
-        "by": "role",
-        "role": "button",
-        "name": "Open"
+        "role": "link",
+        "name": "Open",
+        "scope": {
+          "by": "row",
+          "hasText": [
+            "MAINFRAME TIMEOUT",
+            "4412"
+          ]
+        }
       }
     },
     {
@@ -82,6 +82,13 @@
     }
   ],
   "needsRediscovery": false,
-  "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-output-empty-amount"
+  "confidence": 0.8333333333333334,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-output-empty-amount",
+  "metrics": {
+    "durationMs": 2779,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

@@ -1,0 +1,27 @@
+{
+  "status": "failed",
+  "needsRediscovery": false,
+  "confidence": 1,
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    }
+  ]
+}

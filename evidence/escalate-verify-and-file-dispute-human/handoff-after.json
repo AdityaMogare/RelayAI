@@ -1,0 +1,49 @@
+{
+  "url": "http://127.0.0.1:55438/member/12345/disputes/DSP-1001/receipt",
+  "title": "Relay Credit Union — Dispute filed",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute-human/handoff-after.png",
+  "ariaDiff": {
+    "added": [
+      "    - row \"Rate board Dispute filed Confirmation Return to Member\":",
+      "      - cell \"Rate board Dispute filed Confirmation Return to Member\":",
+      "            - row \"Dispute filed Confirmation Return to Member\":",
+      "              - cell \"Dispute filed Confirmation Return to Member\":",
+      "                - heading \"Dispute filed\" [level=1]",
+      "                - status \"Confirmation\": \"Confirmation: Dispute DSP-1001 filed (Unauthorized). Case CASE-77201.\"",
+      "                  - link \"Return to Member\":",
+      "                    - /url: /member/12345"
+    ],
+    "removed": [
+      "    - row \"Rate board Confirm Dispute Filing Filing DSP-1001 as Unauthorized. Amount (USD) 42.18 Reason Unauthorized Case candidate DSP queue This action is irreversible once confirmed. Confirm Back\":",
+      "      - cell \"Rate board Confirm Dispute Filing Filing DSP-1001 as Unauthorized. Amount (USD) 42.18 Reason Unauthorized Case candidate DSP queue This action is irreversible once confirmed. Confirm Back\":",
+      "            - row \"Confirm Dispute Filing Filing DSP-1001 as Unauthorized. Amount (USD) 42.18 Reason Unauthorized Case candidate DSP queue This action is irreversible once confirmed. Confirm Back\":",
+      "              - cell \"Confirm Dispute Filing Filing DSP-1001 as Unauthorized. Amount (USD) 42.18 Reason Unauthorized Case candidate DSP queue This action is irreversible once confirmed. Confirm Back\":",
+      "                - heading \"Confirm Dispute Filing\" [level=1]",
+      "                  - text: Filing",
+      "                  - strong: DSP-1001",
+      "                  - text: as",
+      "                  - strong: Unauthorized",
+      "                  - text: .",
+      "                - table:",
+      "                  - rowgroup:",
+      "                    - row \"Amount (USD) 42.18\":",
+      "                      - cell \"Amount (USD)\"",
+      "                      - cell \"42.18\"",
+      "                    - row \"Reason Unauthorized\":",
+      "                      - cell \"Reason\"",
+      "                      - cell \"Unauthorized\"",
+      "                    - row \"Case candidate DSP queue\":",
+      "                      - cell \"Case candidate\"",
+      "                      - cell \"DSP queue\"",
+      "                - paragraph: This action is irreversible once confirmed.",
+      "                - button \"Confirm\"",
+      "                - link \"Back\":",
+      "                  - /url: /member/12345/disputes/DSP-1001/file"
+    ]
+  },
+  "sessionId": "6286388e-05a7-4758-91c0-23d0b29d96e7",
+  "stepDisposition": "completed_by_human",
+  "stepCompletedByHuman": true,
+  "operatorId": "teller01",
+  "audit": "operator teller01 (scripted) took control at 2026-09-11T18:26:55.528Z and returned it at 2026-09-11T18:26:55.675Z"
+}

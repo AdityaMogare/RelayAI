@@ -1,0 +1,16 @@
+{
+  "url": "http://127.0.0.1:55438/member/12345",
+  "title": "Relay Credit Union — Member 12345",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/discovery-assisted-escalation/handoff-after.png",
+  "ariaDiff": {
+    "added": [
+      "- status: Live Relay session 4d78416f-33fb-4337-b288-ddd60b11b320 — this is the paused teller window, not a new login."
+    ],
+    "removed": []
+  },
+  "sessionId": "4d78416f-33fb-4337-b288-ddd60b11b320",
+  "stepDisposition": "completed_by_human",
+  "stepCompletedByHuman": true,
+  "operatorId": "teller01",
+  "audit": "operator teller01 (scripted) took control at 2026-09-11T18:25:03.865Z and returned it at 2026-09-11T18:25:03.988Z"
+}

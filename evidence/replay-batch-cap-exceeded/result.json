@@ -1,0 +1,19 @@
+{
+  "status": "failed",
+  "code": "RATE_LIMIT",
+  "classify": "hard_failure",
+  "message": "block-and-reissue-card for tenant-9 exceeded 30/hour.",
+  "stepId": "governance",
+  "outputs": {},
+  "locatorHits": [],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-batch-cap-exceeded",
+  "metrics": {
+    "durationMs": 5,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "assertion": "count of filings for DSP-1001",
+  "note": "SQLite core ledger (node:sqlite, in-memory). This is the query a real core would run.",
+  "engine": "node:sqlite",
+  "sql": "SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'",
+  "count": 1
+}

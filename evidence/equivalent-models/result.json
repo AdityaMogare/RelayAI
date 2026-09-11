@@ -1,0 +1,11 @@
+{
+  "equivalent": true,
+  "gptModel": "gpt-4o",
+  "claudeModel": "claude-sonnet-4-20250514",
+  "parameters": [
+    "memberId",
+    "merchant",
+    "last4"
+  ],
+  "note": "Same recording, two provenance stamps. Discovery is model-dependent; the compiled step sequence is not. Live dual-model is `discover --provider openai|anthropic` — this folder does not fake live API traces."
+}

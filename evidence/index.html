@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>RelayAI evidence catalog</title>
+  <style>
+    body { font: 14px/1.45 system-ui, sans-serif; margin: 24px; color: #1a1a1a; background: #f7f4ea; }
+    h1 { font-size: 22px; }
+    p { max-width: 70em; }
+    table { border-collapse: collapse; width: 100%; background: #fff; }
+    th, td { border: 1px solid #cfc8a8; padding: 8px 10px; vertical-align: top; text-align: left; }
+    th { background: #1f4a7a; color: #fff; }
+    code { font-size: 12px; }
+    img { max-width: 160px; max-height: 100px; border: 1px solid #bbb; }
+    .ranks { font-size: 12px; }
+    pre { background: #fff; border: 1px solid #cfc8a8; padding: 12px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <h1>RelayAI evidence</h1>
+  <p>Static catalog of committed runs. Open this file; no server required. Screenshots are gitignored (<code>evidence/**/*.png</code>) and appear when you generate evidence locally. GIFs are committed.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Run</th><th>Scenario</th><th>Status</th><th>Code</th><th>Duration</th><th>Locator ranks</th><th>Screenshots</th><th>Trace</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>discovery-assisted-attest/</code></td>
+        <td>Supervisor Attestation; teller01 clicks I attest; assistedBy stamped</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>5420 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="discovery-assisted-attest/handoff-after.png"><img src="discovery-assisted-attest/handoff-after.png" alt="discovery-assisted-attest/handoff-after.png" onerror="this.style.display='none'"></a> <a href="discovery-assisted-attest/handoff-before.png"><img src="discovery-assisted-attest/handoff-before.png" alt="discovery-assisted-attest/handoff-before.png" onerror="this.style.display='none'"></a> <a href="discovery-assisted-attest/risky.png"><img src="discovery-assisted-attest/risky.png" alt="discovery-assisted-attest/risky.png" onerror="this.style.display='none'"></a> <a href="discovery-assisted-attest/stuck.png"><img src="discovery-assisted-attest/stuck.png" alt="discovery-assisted-attest/stuck.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="discovery-assisted-attest/artifact.json">artifact.json</a> · <a href="discovery-assisted-attest/handoff-after.json">handoff-after.json</a> · <a href="discovery-assisted-attest/handoff-before.json">handoff-before.json</a> · <a href="discovery-assisted-attest/intervention.json">intervention.json</a> · <a href="discovery-assisted-attest/log.jsonl">log.jsonl</a> · <a href="discovery-assisted-attest/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>discovery-assisted-escalation/</code></td>
+        <td>Stuck Help loop; human clicks Search; assistedBy stamped</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>3221 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="discovery-assisted-escalation/handoff-after.png"><img src="discovery-assisted-escalation/handoff-after.png" alt="discovery-assisted-escalation/handoff-after.png" onerror="this.style.display='none'"></a> <a href="discovery-assisted-escalation/handoff-before.png"><img src="discovery-assisted-escalation/handoff-before.png" alt="discovery-assisted-escalation/handoff-before.png" onerror="this.style.display='none'"></a> <a href="discovery-assisted-escalation/stuck.png"><img src="discovery-assisted-escalation/stuck.png" alt="discovery-assisted-escalation/stuck.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="discovery-assisted-escalation/artifact.json">artifact.json</a> · <a href="discovery-assisted-escalation/handoff-after.json">handoff-after.json</a> · <a href="discovery-assisted-escalation/handoff-before.json">handoff-before.json</a> · <a href="discovery-assisted-escalation/intervention.json">intervention.json</a> · <a href="discovery-assisted-escalation/log.jsonl">log.jsonl</a> · <a href="discovery-assisted-escalation/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>discovery-legacy-frameset/</code></td>
+        <td>Scripted discovery against a real frameset</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1890 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="discovery-legacy-frameset/artifact.json">artifact.json</a> · <a href="discovery-legacy-frameset/log.jsonl">log.jsonl</a> · <a href="discovery-legacy-frameset/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>discovery-lookup-member-savings/</code></td>
+        <td>Live gpt-4o lookup discovery</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>—</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="discovery-lookup-member-savings/artifact.json">artifact.json</a> · <a href="discovery-lookup-member-savings/log.jsonl">log.jsonl</a> · <a href="discovery-lookup-member-savings/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>discovery-verify-and-file-dispute/</code></td>
+        <td>Live gpt-4o dispute discovery + Confirm pause</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>—</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="discovery-verify-and-file-dispute/risky.png"><img src="discovery-verify-and-file-dispute/risky.png" alt="discovery-verify-and-file-dispute/risky.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="discovery-verify-and-file-dispute/artifact.json">artifact.json</a> · <a href="discovery-verify-and-file-dispute/intervention.json">intervention.json</a> · <a href="discovery-verify-and-file-dispute/log.jsonl">log.jsonl</a> · <a href="discovery-verify-and-file-dispute/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>equivalent-models/</code></td>
+        <td>equivalent-models</td>
+        <td><strong>—</strong></td>
+        <td><code>—</code></td>
+        <td>—</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="equivalent-models/claude-sonnet.json">claude-sonnet.json</a> · <a href="equivalent-models/gpt-4o.json">gpt-4o.json</a> · <a href="equivalent-models/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>escalate-batch-business-account/</code></td>
+        <td>Card 3301 business account → supervisor</td>
+        <td><strong>escalated</strong></td>
+        <td><code>SUPERVISOR_REQUIRED</code></td>
+        <td>2551 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-click r1 role, s04-type r1 role, s05-click r1 role</td>
+        <td class="shots"><a href="escalate-batch-business-account/escalate-s06-click.png"><img src="escalate-batch-business-account/escalate-s06-click.png" alt="escalate-batch-business-account/escalate-s06-click.png" onerror="this.style.display='none'"></a> <a href="escalate-batch-business-account/handoff-after.png"><img src="escalate-batch-business-account/handoff-after.png" alt="escalate-batch-business-account/handoff-after.png" onerror="this.style.display='none'"></a> <a href="escalate-batch-business-account/handoff-before.png"><img src="escalate-batch-business-account/handoff-before.png" alt="escalate-batch-business-account/handoff-before.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="escalate-batch-business-account/handoff-after.json">handoff-after.json</a> · <a href="escalate-batch-business-account/handoff-before.json">handoff-before.json</a> · <a href="escalate-batch-business-account/intervention.json">intervention.json</a> · <a href="escalate-batch-business-account/log.jsonl">log.jsonl</a> · <a href="escalate-batch-business-account/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>escalate-open-sub-account/</code></td>
+        <td>Risky Confirm auto-resume</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>3637 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-open r1 role, s04-product r1 role, s05-continue r1 role, s06-confirm r1 role, s07-extract r1 role</td>
+        <td class="shots"><a href="escalate-open-sub-account/escalate-s06-confirm.png"><img src="escalate-open-sub-account/escalate-s06-confirm.png" alt="escalate-open-sub-account/escalate-s06-confirm.png" onerror="this.style.display='none'"></a> <a href="escalate-open-sub-account/handoff-after.png"><img src="escalate-open-sub-account/handoff-after.png" alt="escalate-open-sub-account/handoff-after.png" onerror="this.style.display='none'"></a> <a href="escalate-open-sub-account/handoff-before.png"><img src="escalate-open-sub-account/handoff-before.png" alt="escalate-open-sub-account/handoff-before.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="escalate-open-sub-account/handoff-after.json">handoff-after.json</a> · <a href="escalate-open-sub-account/handoff-before.json">handoff-before.json</a> · <a href="escalate-open-sub-account/intervention.json">intervention.json</a> · <a href="escalate-open-sub-account/log.jsonl">log.jsonl</a> · <a href="escalate-open-sub-account/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>escalate-verify-and-file-dispute/</code></td>
+        <td>HITL Confirm; filings count = 1</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>4907 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role, s04-open-row r0 role, s06-extract-amount r1 role, s07-file r1 role, s08-reason r1 role, s09-continue r1 role, s11-extract r1 role</td>
+        <td class="shots"><a href="escalate-verify-and-file-dispute/escalate-s10-confirm.png"><img src="escalate-verify-and-file-dispute/escalate-s10-confirm.png" alt="escalate-verify-and-file-dispute/escalate-s10-confirm.png" onerror="this.style.display='none'"></a> <a href="escalate-verify-and-file-dispute/handoff-after.png"><img src="escalate-verify-and-file-dispute/handoff-after.png" alt="escalate-verify-and-file-dispute/handoff-after.png" onerror="this.style.display='none'"></a> <a href="escalate-verify-and-file-dispute/handoff-before.png"><img src="escalate-verify-and-file-dispute/handoff-before.png" alt="escalate-verify-and-file-dispute/handoff-before.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="escalate-verify-and-file-dispute/filings-proof.json">filings-proof.json</a> · <a href="escalate-verify-and-file-dispute/handoff-after.json">handoff-after.json</a> · <a href="escalate-verify-and-file-dispute/handoff-before.json">handoff-before.json</a> · <a href="escalate-verify-and-file-dispute/intervention.json">intervention.json</a> · <a href="escalate-verify-and-file-dispute/log.jsonl">log.jsonl</a> · <a href="escalate-verify-and-file-dispute/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>escalate-verify-and-file-dispute-human/</code></td>
+        <td>HITL Confirm visualized as GIF</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>4651 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role, s04-open-row r0 role, s06-extract-amount r1 role, s07-file r1 role, s08-reason r1 role, s09-continue r1 role, s11-extract r1 role</td>
+        <td class="shots"><a href="escalate-verify-and-file-dispute-human/escalate-s10-confirm.png"><img src="escalate-verify-and-file-dispute-human/escalate-s10-confirm.png" alt="escalate-verify-and-file-dispute-human/escalate-s10-confirm.png" onerror="this.style.display='none'"></a> <a href="escalate-verify-and-file-dispute-human/handoff-after.png"><img src="escalate-verify-and-file-dispute-human/handoff-after.png" alt="escalate-verify-and-file-dispute-human/handoff-after.png" onerror="this.style.display='none'"></a> <a href="escalate-verify-and-file-dispute-human/handoff-before.png"><img src="escalate-verify-and-file-dispute-human/handoff-before.png" alt="escalate-verify-and-file-dispute-human/handoff-before.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="escalate-verify-and-file-dispute-human/handoff-after.json">handoff-after.json</a> · <a href="escalate-verify-and-file-dispute-human/handoff-before.json">handoff-before.json</a> · <a href="escalate-verify-and-file-dispute-human/intervention.json">intervention.json</a> · <a href="escalate-verify-and-file-dispute-human/log.jsonl">log.jsonl</a> · <a href="escalate-verify-and-file-dispute-human/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>policy-blocked-admin-wire/</code></td>
+        <td>Click Wire Transfer; Chromium aborts /admin/wire</td>
+        <td><strong>failed</strong></td>
+        <td><code>POLICY_VIOLATION</code></td>
+        <td>846 ms</td>
+        <td class="ranks">s01-wire r1 role</td>
+        <td class="shots"><a href="policy-blocked-admin-wire/failure-s01-wire.png"><img src="policy-blocked-admin-wire/failure-s01-wire.png" alt="policy-blocked-admin-wire/failure-s01-wire.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="policy-blocked-admin-wire/failure-observation.json">failure-observation.json</a> · <a href="policy-blocked-admin-wire/log.jsonl">log.jsonl</a> · <a href="policy-blocked-admin-wire/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>rediscover-verify-and-file-dispute/</code></td>
+        <td>rediscover-verify-and-file-dispute</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>4112 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="rediscover-verify-and-file-dispute/failure-s10-confirm.png"><img src="rediscover-verify-and-file-dispute/failure-s10-confirm.png" alt="rediscover-verify-and-file-dispute/failure-s10-confirm.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="rediscover-verify-and-file-dispute/artifact.json">artifact.json</a> · <a href="rediscover-verify-and-file-dispute/diff.json">diff.json</a> · <a href="rediscover-verify-and-file-dispute/failure-observation.json">failure-observation.json</a> · <a href="rediscover-verify-and-file-dispute/log.jsonl">log.jsonl</a> · <a href="rediscover-verify-and-file-dispute/report.json">report.json</a> · <a href="rediscover-verify-and-file-dispute/result.json">result.json</a> · <a href="rediscover-verify-and-file-dispute/verify-and-file-dispute.json">verify-and-file-dispute.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-ambiguous-row/</code></td>
+        <td>14 Doe rows; Open scoped to :memberId</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1930 ms</td>
+        <td class="ranks">s01-type-last r1 role, s02-search r1 role, s03-open r0 role, s04-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-ambiguous-row/artifact.json">artifact.json</a> · <a href="replay-ambiguous-row/log.jsonl">log.jsonl</a> · <a href="replay-ambiguous-row/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-batch-cap-exceeded/</code></td>
+        <td>31st invoke hits 30/hr blast-radius</td>
+        <td><strong>failed</strong></td>
+        <td><code>RATE_LIMIT</code></td>
+        <td>5 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="replay-batch-cap-exceeded/card-actions-proof.json">card-actions-proof.json</a> · <a href="replay-batch-cap-exceeded/log.jsonl">log.jsonl</a> · <a href="replay-batch-cap-exceeded/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-batch-idempotency/</code></td>
+        <td>Second 4412 reissue; card_actions count = 1</td>
+        <td><strong>business_outcome</strong></td>
+        <td><code>CARD_ALREADY_BLOCKED</code></td>
+        <td>2252 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-click r1 role, s04-type r1 role, s05-click r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-batch-idempotency/card-actions-proof.json">card-actions-proof.json</a> · <a href="replay-batch-idempotency/log.jsonl">log.jsonl</a> · <a href="replay-batch-idempotency/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-batch-reissue-40/</code></td>
+        <td>40 block+reissue invokes against CAMS batch</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>—</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="replay-batch-reissue-40/log.jsonl">log.jsonl</a> · <a href="replay-batch-reissue-40/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-drift-rediscovery/</code></td>
+        <td>Rank-3 extract fallback → promoteHits v2 → green</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1531 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-drift-rediscovery/artifact-v2.json">artifact-v2.json</a> · <a href="replay-drift-rediscovery/log.jsonl">log.jsonl</a> · <a href="replay-drift-rediscovery/result.json">result.json</a> · <a href="replay-drift-rediscovery/v1-degraded.json">v1-degraded.json</a> · <a href="replay-drift-rediscovery/v2-recovered.json">v2-recovered.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-hard-failure-locator/</code></td>
+        <td>Savins Balance locator miss</td>
+        <td><strong>failed</strong></td>
+        <td><code>LOCATOR_MISS</code></td>
+        <td>1314 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role</td>
+        <td class="shots"><a href="replay-hard-failure-locator/failure-s03-extract.png"><img src="replay-hard-failure-locator/failure-s03-extract.png" alt="replay-hard-failure-locator/failure-s03-extract.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-hard-failure-locator/failure-observation.json">failure-observation.json</a> · <a href="replay-hard-failure-locator/log.jsonl">log.jsonl</a> · <a href="replay-hard-failure-locator/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-legacy-hostile/</code></td>
+        <td>replay-legacy-hostile</td>
+        <td><strong>failed</strong></td>
+        <td><code>CHECKPOINT_FAILED</code></td>
+        <td>1358 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role</td>
+        <td class="shots"><a href="replay-legacy-hostile/failure-s02-click.png"><img src="replay-legacy-hostile/failure-s02-click.png" alt="replay-legacy-hostile/failure-s02-click.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-legacy-hostile/failure-observation.json">failure-observation.json</a> · <a href="replay-legacy-hostile/legacy.json">legacy.json</a> · <a href="replay-legacy-hostile/log.jsonl">log.jsonl</a> · <a href="replay-legacy-hostile/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-lookup-not-found/</code></td>
+        <td>Same artifact, member 99999 → MEMBER_NOT_FOUND</td>
+        <td><strong>business_outcome</strong></td>
+        <td><code>MEMBER_NOT_FOUND</code></td>
+        <td>1086 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-lookup-not-found/log.jsonl">log.jsonl</a> · <a href="replay-lookup-not-found/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-lookup-success/</code></td>
+        <td>Deterministic lookup member 12345</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1655 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-lookup-success/log.jsonl">log.jsonl</a> · <a href="replay-lookup-success/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-needs-human-expired/</code></td>
+        <td>?expired=1 SESSION_EXPIRED</td>
+        <td><strong>needs_human</strong></td>
+        <td><code>SESSION_EXPIRED</code></td>
+        <td>420 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="replay-needs-human-expired/failure-s00-navigate.png"><img src="replay-needs-human-expired/failure-s00-navigate.png" alt="replay-needs-human-expired/failure-s00-navigate.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-needs-human-expired/failure-observation.json">failure-observation.json</a> · <a href="replay-needs-human-expired/log.jsonl">log.jsonl</a> · <a href="replay-needs-human-expired/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-output-empty-amount/</code></td>
+        <td>DSP-1003 empty money cell</td>
+        <td><strong>failed</strong></td>
+        <td><code>OUTPUT_INVALID</code></td>
+        <td>2779 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role, s04-open-row r0 role, s06-extract-amount r1 role</td>
+        <td class="shots"><a href="replay-output-empty-amount/failure-s06-extract-amount.png"><img src="replay-output-empty-amount/failure-s06-extract-amount.png" alt="replay-output-empty-amount/failure-s06-extract-amount.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-output-empty-amount/failure-observation.json">failure-observation.json</a> · <a href="replay-output-empty-amount/log.jsonl">log.jsonl</a> · <a href="replay-output-empty-amount/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-recoverable-exhausted/</code></td>
+        <td>?notice=always cap</td>
+        <td><strong>needs_human</strong></td>
+        <td><code>RECOVERABLE_EXHAUSTED</code></td>
+        <td>1535 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots"><a href="replay-recoverable-exhausted/failure-s01-type.png"><img src="replay-recoverable-exhausted/failure-s01-type.png" alt="replay-recoverable-exhausted/failure-s01-type.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-recoverable-exhausted/failure-observation.json">failure-observation.json</a> · <a href="replay-recoverable-exhausted/log.jsonl">log.jsonl</a> · <a href="replay-recoverable-exhausted/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-recoverable-notice/</code></td>
+        <td>?notice=1 dismiss and retry</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1700 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-recoverable-notice/log.jsonl">log.jsonl</a> · <a href="replay-recoverable-notice/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-session-expired-reauth/</code></td>
+        <td>Session dies mid-run; operator Sign In; resume</td>
+        <td><strong>business_outcome</strong></td>
+        <td><code>VALIDATION_ERROR</code></td>
+        <td>1886 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s02-click r1 role</td>
+        <td class="shots"><a href="replay-session-expired-reauth/escalate-s02-click.png"><img src="replay-session-expired-reauth/escalate-s02-click.png" alt="replay-session-expired-reauth/escalate-s02-click.png" onerror="this.style.display='none'"></a> <a href="replay-session-expired-reauth/handoff-after.png"><img src="replay-session-expired-reauth/handoff-after.png" alt="replay-session-expired-reauth/handoff-after.png" onerror="this.style.display='none'"></a> <a href="replay-session-expired-reauth/handoff-before.png"><img src="replay-session-expired-reauth/handoff-before.png" alt="replay-session-expired-reauth/handoff-before.png" onerror="this.style.display='none'"></a></td>
+        <td><a href="replay-session-expired-reauth/handoff-after.json">handoff-after.json</a> · <a href="replay-session-expired-reauth/handoff-before.json">handoff-before.json</a> · <a href="replay-session-expired-reauth/intervention.json">intervention.json</a> · <a href="replay-session-expired-reauth/log.jsonl">log.jsonl</a> · <a href="replay-session-expired-reauth/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-tenant-westside/</code></td>
+        <td>One artifact, CU West skin, tenant-14 overlay</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1445 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-tenant-westside/log.jsonl">log.jsonl</a> · <a href="replay-tenant-westside/overlay.json">overlay.json</a> · <a href="replay-tenant-westside/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-tenant-westside-overlay/</code></td>
+        <td>replay-tenant-westside-overlay</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>1685 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-tenant-westside-overlay/log.jsonl">log.jsonl</a> · <a href="replay-tenant-westside-overlay/overlay.json">overlay.json</a> · <a href="replay-tenant-westside-overlay/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-verify-dispute-already-filed/</code></td>
+        <td>replay-verify-dispute-already-filed</td>
+        <td><strong>business_outcome</strong></td>
+        <td><code>DISPUTE_ALREADY_FILED</code></td>
+        <td>2732 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role, s04-open-row r0 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-verify-dispute-already-filed/filings-proof.json">filings-proof.json</a> · <a href="replay-verify-dispute-already-filed/log.jsonl">log.jsonl</a> · <a href="replay-verify-dispute-already-filed/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-verify-dispute-not-found/</code></td>
+        <td>DSP-9999 → DISPUTE_NOT_FOUND</td>
+        <td><strong>business_outcome</strong></td>
+        <td><code>DISPUTE_NOT_FOUND</code></td>
+        <td>2512 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-verify-dispute-not-found/log.jsonl">log.jsonl</a> · <a href="replay-verify-dispute-not-found/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>replay-verify-dispute-success/</code></td>
+        <td>Deterministic DSP-1001 file</td>
+        <td><strong>success</strong></td>
+        <td><code>—</code></td>
+        <td>4263 ms</td>
+        <td class="ranks">s01-type r1 role, s02-click r1 role, s03-extract r1 role, s03-disputes r1 role, s04-open-row r0 role, s06-extract-amount r1 role, s07-file r1 role, s08-reason r1 role, s09-continue r1 role, s10-confirm r1 role, s11-extract r1 role</td>
+        <td class="shots">—</td>
+        <td><a href="replay-verify-dispute-success/log.jsonl">log.jsonl</a> · <a href="replay-verify-dispute-success/result.json">result.json</a></td>
+      </tr>
+<tr>
+        <td><code>stability-50/</code></td>
+        <td>N=50 lookup soak</td>
+        <td><strong>1</strong></td>
+        <td><code>—</code></td>
+        <td>p50 1513 ms</td>
+        <td class="ranks">—</td>
+        <td class="shots">—</td>
+        <td><a href="stability-50/log.jsonl">log.jsonl</a> · <a href="stability-50/result.json">result.json</a></td>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Discovery vs replay cost</h2><pre>{
+  &quot;note&quot;: &quot;Live discovery logs from these folders did not record token usage. Cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Durations are wall-clock from the committed traces.&quot;,
+  &quot;table&quot;: [
+    &quot;discovery      gpt-4o     38445.5s    13 model calls   $0.09&quot;,
+    &quot;replay         none       4.3s     0 model calls   $0.00      9018.4× faster, 100% cheaper&quot;,
+    &quot;replay ×50     none       76.3s     0 model calls   $0.00      50/50 success, 0% fallbacks&quot;
+  ],
+  &quot;rows&quot;: [
+    {
+      &quot;path&quot;: &quot;discovery&quot;,
+      &quot;model&quot;: &quot;gpt-4o&quot;,
+      &quot;scenario&quot;: &quot;verify-and-file-dispute&quot;,
+      &quot;durationMs&quot;: 38445456,
+      &quot;modelCalls&quot;: 13,
+      &quot;estimatedCostUsd&quot;: 0.0871
+    },
+    {
+      &quot;path&quot;: &quot;discovery&quot;,
+      &quot;model&quot;: &quot;gpt-4o&quot;,
+      &quot;scenario&quot;: &quot;lookup-member-savings&quot;,
+      &quot;durationMs&quot;: 39584170,
+      &quot;modelCalls&quot;: 5,
+      &quot;estimatedCostUsd&quot;: 0.0335
+    },
+    {
+      &quot;path&quot;: &quot;replay&quot;,
+      &quot;model&quot;: &quot;none&quot;,
+      &quot;scenario&quot;: &quot;verify-and-file-dispute&quot;,
+      &quot;durationMs&quot;: 4263,
+      &quot;modelCalls&quot;: 0,
+      &quot;estimatedCostUsd&quot;: 0
+    },
+    {
+      &quot;path&quot;: &quot;replay&quot;,
+      &quot;model&quot;: &quot;none&quot;,
+      &quot;scenario&quot;: &quot;lookup-member-savings&quot;,
+      &quot;durationMs&quot;: 1655,
+      &quot;modelCalls&quot;: 0,
+      &quot;estimatedCostUsd&quot;: 0
+    },
+    {
+      &quot;path&quot;: &quot;replay ×50&quot;,
+      &quot;model&quot;: &quot;none&quot;,
+      &quot;scenario&quot;: &quot;lookup-member-savings&quot;,
+      &quot;durationMs&quot;: 76337,
+      &quot;modelCalls&quot;: 0,
+      &quot;estimatedCostUsd&quot;: 0,
+      &quot;success&quot;: 50,
+      &quot;runs&quot;: 50,
+      &quot;fallbackRate&quot;: 0
+    }
+  ]
+}
+</pre>
+</body>
+</html>

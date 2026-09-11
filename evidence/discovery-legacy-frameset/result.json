@@ -1,0 +1,15 @@
+{
+  "status": "success",
+  "outputs": {
+    "savingsBalance": "[REDACTED-PII]"
+  },
+  "message": "Savings balance is visible.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/discovery-legacy-frameset",
+  "metrics": {
+    "durationMs": 1890,
+    "modelCalls": 4,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

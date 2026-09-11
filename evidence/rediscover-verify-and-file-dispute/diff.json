@@ -1,0 +1,191 @@
+{
+  "capabilityId": "verify-and-file-dispute",
+  "tenantId": "westside-drift",
+  "v1Path": "/Users/adityamogare/RelayAI/capabilities/verify-and-file-dispute.json",
+  "v2Path": "/Users/adityamogare/RelayAI/evidence/rediscover-verify-and-file-dispute-2026-09-11T18-25-10-275Z/verify-and-file-dispute.json",
+  "replayV1": {
+    "status": "failed",
+    "confidence": 0.4,
+    "needsRediscovery": true
+  },
+  "replayV2": {
+    "status": "business_outcome",
+    "confidence": 0.75,
+    "needsRediscovery": false
+  },
+  "diff": [
+    {
+      "id": "s00-navigate",
+      "from": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "Disputes"
+      },
+      "to": {
+        "action": "navigate",
+        "risk": "safe"
+      }
+    },
+    {
+      "id": "s01-type",
+      "from": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "Open",
+        "scope": [
+          ":merchant",
+          ":last4"
+        ]
+      },
+      "to": {
+        "action": "type",
+        "risk": "safe",
+        "inputFrom": "parameters.memberId",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "id": "s02-click",
+      "from": {
+        "action": "extract",
+        "risk": "safe",
+        "outputName": "transactionAmount",
+        "role": "cell",
+        "name": "Transaction Amount"
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "button",
+        "name": "Search Members"
+      }
+    },
+    {
+      "id": "s03-click",
+      "from": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "File Dispute"
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "Card Disputes"
+      }
+    },
+    {
+      "id": "s04-click",
+      "from": {
+        "action": "select",
+        "risk": "safe",
+        "inputFrom": "parameters.reason",
+        "role": "combobox",
+        "name": "Reason"
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "Open Row",
+        "scope": [
+          ":merchant",
+          ":last4"
+        ]
+      }
+    },
+    {
+      "id": "s05-extract",
+      "from": {
+        "action": "click",
+        "risk": "safe",
+        "role": "button",
+        "name": "Continue"
+      },
+      "to": {
+        "action": "extract",
+        "risk": "safe",
+        "outputName": "transactionAmount",
+        "role": "cell",
+        "name": "Transaction Amount"
+      }
+    },
+    {
+      "id": "s06-click",
+      "from": {
+        "action": "click",
+        "risk": "risky",
+        "role": "button",
+        "name": "Confirm"
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "link",
+        "name": "File Dispute Now"
+      }
+    },
+    {
+      "id": "s07-select",
+      "from": {
+        "action": "extract",
+        "risk": "safe",
+        "outputName": "confirmation",
+        "role": "status",
+        "name": "Confirmation"
+      },
+      "to": {
+        "action": "select",
+        "risk": "safe",
+        "inputFrom": "parameters.reason",
+        "role": "combobox",
+        "name": "Reason"
+      }
+    },
+    {
+      "id": "s08-click",
+      "from": {
+        "action": "(missing)",
+        "risk": ""
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "button",
+        "name": "Continue to Review"
+      }
+    },
+    {
+      "id": "s09-click",
+      "from": {
+        "action": "(missing)",
+        "risk": ""
+      },
+      "to": {
+        "action": "click",
+        "risk": "safe",
+        "role": "button",
+        "name": "Confirm Filing"
+      }
+    },
+    {
+      "id": "s10-extract",
+      "from": {
+        "action": "(missing)",
+        "risk": ""
+      },
+      "to": {
+        "action": "extract",
+        "risk": "safe",
+        "outputName": "confirmation",
+        "role": "status",
+        "name": "Confirmation"
+      }
+    }
+  ],
+  "evidence": "/Users/adityamogare/RelayAI/evidence/rediscover-verify-and-file-dispute-2026-09-11T18-25-10-275Z"
+}

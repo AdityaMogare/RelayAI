@@ -1,0 +1,35 @@
+{
+  "status": "success",
+  "confidence": 0.6666666666666666,
+  "needsRediscovery": true,
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-extract",
+      "rank": 3,
+      "by": "text",
+      "locator": {
+        "by": "text"
+      }
+    }
+  ]
+}

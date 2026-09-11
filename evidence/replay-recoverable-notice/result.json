@@ -2,7 +2,10 @@
   "status": "success",
   "message": "Capability completed and success checkpoint held.",
   "outputs": {
-    "savingsBalance": "[REDACTED-PII]"
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
   },
   "locatorHits": [
     {
@@ -38,5 +41,12 @@
   ],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-recoverable-notice"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-recoverable-notice",
+  "metrics": {
+    "durationMs": 1700,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }

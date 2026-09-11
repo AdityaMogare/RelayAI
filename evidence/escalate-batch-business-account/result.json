@@ -1,0 +1,70 @@
+{
+  "status": "escalated",
+  "interventionId": "bf60e4b7-b135-4673-a64e-cb57f8a756bf",
+  "message": "auto-resume",
+  "stepId": "s06-click",
+  "code": "SUPERVISOR_REQUIRED",
+  "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "CAMS"
+      }
+    },
+    {
+      "stepId": "s04-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Card last 4"
+      }
+    },
+    {
+      "stepId": "s05-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Open by last 4"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-batch-business-account",
+  "metrics": {
+    "durationMs": 2551,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

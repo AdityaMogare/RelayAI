@@ -1,16 +1,16 @@
 {
-  "url": "http://127.0.0.1:51387/member/12345/sub-account?product=Share+Savings&step=review",
+  "url": "http://127.0.0.1:55438/member/12345/sub-account?product=Share+Savings&step=review",
   "title": "Relay Credit Union — Confirm Sub-Account",
   "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-open-sub-account/handoff-after.png",
   "ariaDiff": {
     "added": [
-      "- status: Live Relay session 5cdece6e-0595-4cb2-8dce-f05f5e6cffff — this is the paused teller window, not a new login."
+      "- status: Live Relay session cd5ce9eb-806d-483c-8326-56231387d79f — this is the paused teller window, not a new login."
     ],
     "removed": []
   },
-  "sessionId": "5cdece6e-0595-4cb2-8dce-f05f5e6cffff",
+  "sessionId": "cd5ce9eb-806d-483c-8326-56231387d79f",
   "stepDisposition": "not_done",
   "stepCompletedByHuman": false,
   "operatorId": "ci-bot",
-  "audit": "operator ci-bot took control at 2026-09-10T16:18:36.941Z and returned it at 2026-09-10T16:18:36.942Z"
+  "audit": "operator ci-bot (scripted) took control at 2026-09-11T18:24:29.907Z and returned it at 2026-09-11T18:24:29.907Z"
 }

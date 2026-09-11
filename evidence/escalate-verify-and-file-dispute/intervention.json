@@ -2,55 +2,56 @@
   "reason": "Risky/irreversible step requires human approval.",
   "capabilityId": "verify-and-file-dispute",
   "stepId": "s10-confirm",
-  "url": "http://127.0.0.1:51387/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
+  "url": "http://127.0.0.1:55438/member/12345/disputes/DSP-1001/file?reason=Unauthorized&step=review",
   "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-verify-and-file-dispute/escalate-s10-confirm.png",
   "checkpointExpect": "textIncludes \"Dispute filed\"",
-  "sessionId": "b7cbf1a3-2310-4617-bcae-8d84f07997b7",
+  "sessionId": "4c8409fa-f8b4-4cd3-a5b4-c487df0b58d0",
   "entryCheckpoint": {
     "kind": "urlIncludes",
     "expect": "/member/12345/disputes/DSP-1001/file"
   },
-  "id": "055dcdd8-4f43-4c46-8e86-50688608de5c",
-  "createdAt": "2026-09-10T16:18:45.321Z",
+  "id": "514f3edb-b8b1-46bf-bf7d-5407f2044df5",
+  "createdAt": "2026-09-11T18:24:34.898Z",
   "state": "resolved",
   "ttlMs": 120000,
-  "expiresAt": "2026-09-10T16:20:45.321Z",
+  "expiresAt": "2026-09-11T18:26:34.898Z",
   "queuePriority": 10,
   "transitions": [
     {
       "state": "raised",
-      "at": "2026-09-10T16:18:45.321Z",
+      "at": "2026-09-11T18:24:34.898Z",
       "note": "Risky/irreversible step requires human approval."
     },
     {
       "state": "claimed",
-      "at": "2026-09-10T16:18:45.529Z",
+      "at": "2026-09-11T18:24:35.066Z",
       "operatorId": "teller01",
       "note": "teller01 claimed"
     },
     {
       "state": "in_control",
-      "at": "2026-09-10T16:18:45.529Z",
+      "at": "2026-09-11T18:24:35.067Z",
       "operatorId": "teller01",
       "note": "teller01 in_control"
     },
     {
       "state": "returned",
-      "at": "2026-09-10T16:18:45.751Z",
+      "at": "2026-09-11T18:24:35.209Z",
       "operatorId": "teller01",
       "note": "teller01 completed the risky step on the live session"
     },
     {
       "state": "resolved",
-      "at": "2026-09-10T16:18:46.157Z",
+      "at": "2026-09-11T18:24:35.507Z",
       "operatorId": "teller01",
       "note": "risky step skipped after human handback"
     }
   ],
   "operatorId": "teller01",
   "stepDisposition": "completed_by_human",
-  "claimedAt": "2026-09-10T16:18:45.529Z",
-  "inControlAt": "2026-09-10T16:18:45.529Z",
-  "returnedAt": "2026-09-10T16:18:45.751Z",
-  "resolvedAt": "2026-09-10T16:18:46.157Z"
+  "claimedAt": "2026-09-11T18:24:35.066Z",
+  "operatorKind": "scripted",
+  "inControlAt": "2026-09-11T18:24:35.067Z",
+  "returnedAt": "2026-09-11T18:24:35.209Z",
+  "resolvedAt": "2026-09-11T18:24:35.507Z"
 }

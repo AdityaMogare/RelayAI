@@ -1,0 +1,16 @@
+{
+  "status": "success",
+  "outputs": {
+    "transactionAmount": "[REDACTED-PII]",
+    "confirmation": "[REDACTED-PII]"
+  },
+  "message": "Filed with human assistance on the attestation.",
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/discovery-assisted-attest",
+  "metrics": {
+    "durationMs": 5420,
+    "modelCalls": 12,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

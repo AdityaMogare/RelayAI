@@ -1,0 +1,51 @@
+{
+  "status": "business_outcome",
+  "classify": "business_outcome",
+  "code": "VALIDATION_ERROR",
+  "message": "The form rejected the input.",
+  "stepId": "s02-click",
+  "observed": "Relay Credit Union — Member Servicing | http://127.0.0.1:55438/search?mid=&last= | Member ID, Search, Last Name",
+  "outputs": {},
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-session-expired-reauth",
+  "metrics": {
+    "durationMs": 1886,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

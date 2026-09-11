@@ -4,11 +4,18 @@
   "code": "RECOVERABLE_EXHAUSTED",
   "stepId": "s01-type",
   "expected": "interstitial dismissed within retry budget",
-  "observed": "Relay Credit Union — Member Servicing | http://127.0.0.1:51387/?notice=always | RELAY CREDIT UNION — Member Servicing\nCore Banking Console  |  Institution: Demo CU  |  Operator: teller01\n\n\nMember Lookup\n\nMember ID\t\nSearch\n\nSystem Notice\n\nScheduled core maintenance window in 30 minutes. Continue only if this work is urg",
+  "observed": "Relay Credit Union — Member Servicing | http://127.0.0.1:55438/?notice=always | Member ID, Search, Dismiss, Last Name",
   "message": "Recoverable SYSTEM_NOTICE returned on every attempt (cap 3). A person needs to look.",
   "outputs": {},
   "locatorHits": [],
   "needsRediscovery": false,
   "confidence": 1,
-  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-recoverable-exhausted"
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/replay-recoverable-exhausted",
+  "metrics": {
+    "durationMs": 1535,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
 }
