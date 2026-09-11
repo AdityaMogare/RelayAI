@@ -5,6 +5,7 @@ import { readCapabilityFile } from "../src/artifact/store.ts";
 export const LOOKUP_MEMBER_SAVINGS: Capability = readCapabilityFile("lookup-member-savings").capability;
 export const OPEN_SUB_ACCOUNT: Capability = readCapabilityFile("open-sub-account").capability;
 export const VERIFY_AND_FILE_DISPUTE: Capability = readCapabilityFile("verify-and-file-dispute").capability;
+export const BLOCK_AND_REISSUE_CARD: Capability = readCapabilityFile("block-and-reissue-card").capability;
 
 export const DISPUTE_OK = {
   memberId: "12345",

@@ -43,4 +43,30 @@ describe("irreversible console writes", () => {
       await server.close();
     }
   });
+
+  it("rejects bare POST and PUT on card block and reissue", async () => {
+    const server = await startConsole(0);
+    try {
+      const bareBlock = await fetch(`${server.origin}/member/12345/cards/4412/block`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "",
+      });
+      expect(bareBlock.status).toBe(400);
+
+      const bareReissue = await fetch(`${server.origin}/member/12345/cards/4412/reissue`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "",
+      });
+      expect(bareReissue.status).toBe(400);
+
+      const putBlock = await fetch(`${server.origin}/member/12345/cards/4412/block`, { method: "PUT" });
+      expect(putBlock.status).toBe(405);
+      const putReissue = await fetch(`${server.origin}/member/12345/cards/4412/reissue`, { method: "PUT" });
+      expect(putReissue.status).toBe(405);
+    } finally {
+      await server.close();
+    }
+  });
 });

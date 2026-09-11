@@ -14,6 +14,10 @@ import { probeApplicability } from "./replay/probe.ts";
 import { driftScore } from "./replay/drift.ts";
 import { DesktopSurface } from "./surfaces/desktop.ts";
 import { MockSurface } from "./surfaces/mock.ts";
+import { WebSurface } from "./surfaces/web.ts";
+import { startConsole } from "../apps/bank-console/server.ts";
+import { MemoryInvocationStore, RateLimiter, loadRuntime } from "./policy/runtime.ts";
+import { MemoryRunLedger } from "./replay/ledger.ts";
 
 export type VerifyRow = {
   scenario: string;
@@ -272,6 +276,93 @@ export async function runVerify(): Promise<VerifyReport> {
     const checked = check(result, item.expect);
     const expected = [item.expect.status, item.expect.code].filter(Boolean).join(" ");
     rows.push(row(item.scenario, expected, checked.got, checked.proof, checked.ok));
+  }
+
+  const CARD = readCapabilityFile("block-and-reissue-card").capability;
+  const CARD_SQL = "SELECT count(*) FROM card_actions WHERE member_id='12345' AND last4='4412'";
+  const consoleServer = await startConsole(0);
+  const liveCard = async (
+    inputs: Record<string, string>,
+    extra: { approveRisky?: boolean; limiter?: RateLimiter; tenantId?: string; ledger?: MemoryRunLedger } = {},
+  ): Promise<RunResult> => {
+    const surface = new WebSurface();
+    await surface.launch();
+    const evidence = new EvidenceStore(`verify-card-${Math.random().toString(16).slice(2)}`, mkdtempSync(join(tmpdir(), "relay-verify-card-")));
+    try {
+      return await new ReplayEngine(surface, evidence).run(CARD, {
+        inputs,
+        baseUrl: consoleServer.origin,
+        approveRisky: extra.approveRisky,
+        limiter: extra.limiter,
+        tenantId: extra.tenantId,
+        ledger: extra.ledger,
+      });
+    } finally {
+      await surface.close();
+    }
+  };
+  try {
+    consoleServer.reset();
+    const success = await liveCard({ memberId: "12345", last4: "4412" }, { approveRisky: true });
+    const confirmation = String(success.outputs.confirmation ?? "");
+    rows.push(
+      row(
+        "card block+reissue success",
+        "success CASE-88",
+        `${success.status} ${confirmation}`,
+        `sqlite ${consoleServer.cardActions.exec(CARD_SQL).count}`,
+        success.status === "success" && /CASE-88\d+/.test(confirmation),
+      ),
+    );
+
+    consoleServer.reset();
+    const blocked = await liveCard({ memberId: "12345", last4: "7788" }, { approveRisky: true });
+    rows.push(
+      row(
+        "card already-blocked business outcome",
+        "business_outcome CARD_ALREADY_BLOCKED",
+        `${blocked.status} ${blocked.code ?? ""}`.trim(),
+        blocked.message ?? "",
+        blocked.status === "business_outcome" && blocked.code === "CARD_ALREADY_BLOCKED",
+      ),
+    );
+
+    consoleServer.reset();
+    const ledger = new MemoryRunLedger();
+    const first = await liveCard({ memberId: "12345", last4: "4412" }, { approveRisky: true, ledger });
+    const second = await liveCard({ memberId: "12345", last4: "4412" }, { approveRisky: true, ledger });
+    const freeSecond = await liveCard({ memberId: "12345", last4: "4412" }, { approveRisky: true });
+    const count = consoleServer.cardActions.exec(CARD_SQL).count;
+    rows.push(
+      row(
+        "card batch idempotency",
+        "count=1 + ledger conflict + CARD_ALREADY_BLOCKED",
+        `count=${count} ledger=${second.code ?? second.status} free=${freeSecond.code ?? freeSecond.status}`,
+        CARD_SQL,
+        first.status === "success" &&
+          second.code === "IDEMPOTENCY_CONFLICT" &&
+          freeSecond.code === "CARD_ALREADY_BLOCKED" &&
+          count === 1,
+      ),
+    );
+
+    consoleServer.reset();
+    const capStore = new MemoryInvocationStore();
+    const limiter = new RateLimiter(capStore, loadRuntime().blastRadius);
+    for (let i = 0; i < 30; i += 1) limiter.assert("tenant-9", "block-and-reissue-card");
+    const capped = await liveCard({ memberId: "12345", last4: "4412" }, { approveRisky: true, limiter, tenantId: "tenant-9" });
+    const capCount = consoleServer.cardActions.exec(CARD_SQL).count;
+    rows.push(
+      row(
+        "card blast-radius cap",
+        "failed RATE_LIMIT count=0",
+        `${capped.status} ${capped.code ?? ""} count=${capCount}`,
+        "30 pre-stamped invocations then one live run",
+        capped.status === "failed" && capped.code === "RATE_LIMIT" && capCount === 0,
+      ),
+    );
+  } finally {
+    await consoleServer.close();
   }
 
   const roundTrip = await scriptedRoundTrip();

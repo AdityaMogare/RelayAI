@@ -171,6 +171,29 @@ describe("compiler", () => {
     expect(artifact.success.checkpoint.expect).toBe("Dispute filed");
   });
 
+  it("attaches CARD_ALREADY_BLOCKED and SUPERVISOR_REQUIRED for block-and-reissue", () => {
+    const artifact = compileArtifact({
+      goal: "Block and reissue the debit card ending 4412 for member 12345 in CAMS.",
+      targetUrl: "http://127.0.0.1:3000/",
+      id: "block-and-reissue-card",
+      outputs: { confirmation: "Confirmation: Card 4412 blocked and reissued. Case CASE-88001." },
+      recorded: [
+        recorded({
+          action: {
+            name: "click",
+            target: { primary: { by: "role", role: "button", name: "Confirm" } },
+          },
+          usedLocatorName: "Confirm",
+          risk: "risky",
+        }),
+      ],
+    });
+    expect(artifact.exceptionalStates.some((s) => s.code === "CARD_ALREADY_BLOCKED")).toBe(true);
+    expect(artifact.exceptionalStates.some((s) => s.code === "SUPERVISOR_REQUIRED" && s.classify === "needs_human")).toBe(true);
+    expect(artifact.success.checkpoint.expect).toBe("Card reissued");
+    expect(artifact.sideEffects.kind).toBe("irreversible");
+  });
+
   it("emits ranked locator chains role → label → text → css", () => {
     const artifact = compileArtifact({
       goal: "Look up member 12345",

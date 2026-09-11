@@ -38,6 +38,10 @@ const SCENARIOS: Record<string, string> = {
   "replay-needs-human-expired": "?expired=1 SESSION_EXPIRED",
   "replay-output-empty-amount": "DSP-1003 empty money cell",
   "replay-recoverable-exhausted": "?notice=always cap",
+  "replay-batch-reissue-40": "40 block+reissue invokes against CAMS batch",
+  "replay-batch-cap-exceeded": "31st invoke hits 30/hr blast-radius",
+  "replay-batch-idempotency": "Second 4412 reissue; card_actions count = 1",
+  "escalate-batch-business-account": "Card 3301 business account → supervisor",
 };
 
 function listRuns(root: string): string[] {

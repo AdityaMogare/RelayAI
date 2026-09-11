@@ -11,5 +11,7 @@ describe("verify matrix", () => {
     expect(report.ok).toBe(true);
     expect(report.rows.some((row) => row.scenario === "round-trip discover→replay")).toBe(true);
     expect(report.rows.some((row) => row.scenario === "determinism double-run")).toBe(true);
-  });
+    expect(report.rows.some((row) => row.scenario === "card block+reissue success")).toBe(true);
+    expect(report.rows.some((row) => row.scenario === "card blast-radius cap")).toBe(true);
+  }, 180_000);
 });
