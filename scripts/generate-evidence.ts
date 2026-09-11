@@ -19,6 +19,7 @@ import { compileArtifact } from "../src/artifact/compile.ts";
 import { equivalentSteps } from "../src/artifact/equivalent.ts";
 import { bindTenant } from "../src/overlay/store.ts";
 import { costUsd } from "../src/agent/cost.ts";
+import { loadRuntime, MemoryInvocationStore, RateLimiter } from "../src/policy/runtime.ts";
 
 const ROOT = resolve(process.cwd(), "evidence");
 const store = new FileArtifactStore();
@@ -211,6 +212,9 @@ try {
   const lookup = await store.loadWithHash("capabilities/lookup-member-savings.json");
   const openSub = await store.loadWithHash("capabilities/open-sub-account.json");
   const dispute = await store.loadWithHash("capabilities/verify-and-file-dispute.json");
+  const card = await store.loadWithHash("capabilities/block-and-reissue-card.json");
+  const cardInputs = { memberId: "12345", last4: "4412" };
+  const cardSql = "SELECT count(*) FROM card_actions WHERE member_id='12345' AND last4='4412'";
 
   let lookupReplay: RunResult | undefined;
   let disputeReplay: RunResult | undefined;
@@ -742,6 +746,117 @@ try {
     console.log("human escalate gif", result.status, gif ?? "no-ffmpeg");
   });
 
+  // batch-40 is uncapped: runtime.yaml is 30/hr, which would stop a 40-invoke soak.
+  // A fresh RateLimiter is not wired here. replay-batch-cap-exceeded uses the 30/hr lever.
+  await withSurface(async (surface) => {
+    const evidence = reset("replay-batch-reissue-40");
+    const statuses: string[] = [];
+    const engine = new ReplayEngine(surface, evidence);
+    for (let i = 0; i < 40; i += 1) {
+      consoleServer.reset();
+      const result = await engine.run(card.capability, {
+        inputs: cardInputs,
+        baseUrl,
+        approveRisky: true,
+        artifactPath: card.path,
+        contentHash: card.contentHash,
+      });
+      statuses.push(result.status);
+      if (result.status !== "success") {
+        throw new Error(`batch-40 invoke ${i + 1} expected success, got ${result.status}/${result.code}`);
+      }
+    }
+    evidence.saveJson("result.json", {
+      status: "success",
+      runs: 40,
+      success: statuses.filter((s) => s === "success").length,
+      limiter: "uncapped — runtime.yaml 30/hr would stop this volume run",
+    });
+    console.log("batch reissue 40", statuses.filter((s) => s === "success").length);
+  });
+
+  await withSurface(async (surface) => {
+    const evidence = reset("replay-batch-cap-exceeded");
+    const limiter = new RateLimiter(new MemoryInvocationStore(), loadRuntime().blastRadius);
+    const engine = new ReplayEngine(surface, evidence);
+    let last: RunResult | undefined;
+    for (let i = 0; i < 31; i += 1) {
+      consoleServer.reset();
+      last = await engine.run(card.capability, {
+        inputs: cardInputs,
+        baseUrl,
+        approveRisky: true,
+        artifactPath: card.path,
+        contentHash: card.contentHash,
+        limiter,
+        tenantId: "tenant-9",
+      });
+      if (i < 30 && last.status !== "success") {
+        throw new Error(`cap-exceeded invoke ${i + 1} expected success, got ${last.status}/${last.code}`);
+      }
+    }
+    const proof = consoleServer.cardActions.exec(cardSql);
+    evidence.saveJson("card-actions-proof.json", proof);
+    if (last?.status !== "failed" || last.code !== "RATE_LIMIT") {
+      throw new Error(`31st invoke expected failed/RATE_LIMIT, got ${last?.status}/${last?.code}`);
+    }
+    if (proof.count !== 0) {
+      throw new Error(`${cardSql} after RATE_LIMIT expected 0 (console reset before #31), got ${proof.count}`);
+    }
+    console.log("batch cap exceeded", last.status, last.code, proof);
+  });
+
+  await withSurface(async (surface) => {
+    const evidence = reset("replay-batch-idempotency");
+    consoleServer.reset();
+    const engine = new ReplayEngine(surface, evidence);
+    const first = await engine.run(card.capability, {
+      inputs: cardInputs,
+      baseUrl,
+      approveRisky: true,
+      artifactPath: card.path,
+      contentHash: card.contentHash,
+    });
+    const second = await engine.run(card.capability, {
+      inputs: cardInputs,
+      baseUrl,
+      approveRisky: true,
+      artifactPath: card.path,
+      contentHash: card.contentHash,
+    });
+    const proof = consoleServer.cardActions.exec(cardSql);
+    evidence.saveJson("card-actions-proof.json", {
+      ...proof,
+      rows: consoleServer.cardActions.all(),
+      first: { status: first.status, code: first.code },
+      second: { status: second.status, code: second.code },
+    });
+    if (proof.count !== 1) {
+      throw new Error(`${cardSql} expected 1, got ${proof.count}`);
+    }
+    console.log("batch idempotency", first.status, second.status, second.code, proof);
+  });
+
+  await withSurface(async (surface) => {
+    const evidence = reset("escalate-batch-business-account");
+    consoleServer.reset();
+    const control = new ControlPlane(surface, evidence, immediateResume("auto-resume"));
+    const result = await new ReplayEngine(surface, evidence).run(card.capability, {
+      inputs: { memberId: "12345", last4: "3301" },
+      baseUrl,
+      control,
+      artifactPath: card.path,
+      contentHash: card.contentHash,
+    });
+    if (result.status !== "escalated" || result.code !== "SUPERVISOR_REQUIRED") {
+      throw new Error(`business-account expected escalated/SUPERVISOR_REQUIRED, got ${result.status}/${result.code}`);
+    }
+    if (!control.lastIntervention) {
+      throw new Error("business-account expected a ControlPlane intervention");
+    }
+    console.log("escalate business account", result.status, result.code, control.lastIntervention.id);
+  });
+
   const lookupDecides = countDecides("discovery-lookup-member-savings");
   const disputeDecides = countDecides("discovery-verify-and-file-dispute");
   const EST_IN = 1800;
@@ -868,6 +983,10 @@ Open \`index.html\` for the catalog (status, code, duration, locator ranks, trac
 | \`replay-needs-human-expired/\` | \`?expired=1\`: session expired. Status \`needs_human\` / \`SESSION_EXPIRED\` — ops ticket, not a locator bug. |
 | \`replay-output-empty-amount/\` | DSP-1003: dispute screen loads, amount cell empty (mainframe timeout). Checkpoints pass; typed money output fails \`OUTPUT_INVALID\`. |
 | \`replay-recoverable-exhausted/\` | \`?notice=always\`: interstitial returns every time. After the retry cap, \`needs_human\` / \`RECOVERABLE_EXHAUSTED\`. |
+| \`replay-batch-reissue-40/\` | 40 block+reissue invokes of \`capabilities/block-and-reissue-card.json\` (4412). Console reset between invokes. Uncapped — runtime.yaml 30/hr would stop this volume run. |
+| \`replay-batch-cap-exceeded/\` | 31st invoke against runtime.yaml 30/hr → \`failed\` / \`RATE_LIMIT\`. Console reset before #31 so uniqueness cannot explain a zero write. |
+| \`replay-batch-idempotency/\` | Second 4412 reissue; \`card_actions\` SQLite count = 1. |
+| \`escalate-batch-business-account/\` | Card 3301: ControlPlane wired → \`escalated\` / \`SUPERVISOR_REQUIRED\`. Without a ControlPlane the same detector is \`needs_human\`. |
 
 The reviewable capabilities live at \`/capabilities/*.json\`. \`discover.artifact\` / \`replay.start\` \`contentHash\` values are SHA-256 of that file. A fresh \`discover --id X\` stamps the hash on \`discover.end\` as well.
 `,

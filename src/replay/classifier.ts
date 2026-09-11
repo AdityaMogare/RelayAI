@@ -154,6 +154,30 @@ export async function handleException(
       control.finish("resolved", "session restored by operator");
       return { kind: "reauth" };
     }
+    if (control) {
+      const decision = await host.escalateToHuman(
+        control,
+        { id: stepId, action: "wait", risk: "safe", timeoutMs: 8000, retryBudget: 3 },
+        observed,
+        host.currentCapability ?? ({ id: host.currentAudit?.capabilityId ?? "unknown" } as Capability),
+        state.message,
+      );
+      control.finish(decision.action === "abort" ? "abandoned" : "resolved", decision.note ?? state.message);
+      return {
+        kind: "stop",
+        result: host.complete(
+          {
+            status: "escalated",
+            interventionId: control.lastIntervention?.id,
+            message: decision.note ?? state.message,
+            stepId,
+            code: state.code,
+          },
+          outputs,
+          hits,
+        ),
+      };
+    }
     return {
       kind: "stop",
       result: await host.fail({

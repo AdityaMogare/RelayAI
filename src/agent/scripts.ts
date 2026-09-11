@@ -104,6 +104,31 @@ export function scriptedAssistedDiscovery(): AgentDecision[] {
   ];
 }
 
+export const BLOCK_AND_REISSUE_GOAL =
+  "Block and reissue the debit card ending 4412 for member 12345 in CAMS.";
+
+/** CAMS: look up the member, open the card by last 4, block, then reissue. */
+export function scriptedBlockAndReissue(): AgentDecision[] {
+  return [
+    { tool: "type", role: "textbox", name: "Member ID", text: "12345", reason: "Enter the member number from the goal." },
+    { tool: "click", role: "button", name: "Search", reason: "Submit the lookup." },
+    { tool: "click", role: "link", name: "CAMS", reason: "Open the card batch." },
+    { tool: "type", role: "textbox", name: "Card last 4", text: "4412", reason: "Last 4 from the goal." },
+    { tool: "click", role: "button", name: "Open by last 4", reason: "Open that card." },
+    { tool: "click", role: "link", name: "Block Card", reason: "Start the block." },
+    { tool: "click", role: "button", name: "Confirm", reason: "Confirm the block." },
+    { tool: "click", role: "button", name: "Confirm", reason: "Confirm the reissue." },
+    {
+      tool: "extract",
+      role: "status",
+      name: "Confirmation",
+      outputName: "confirmation",
+      reason: "Read the confirmation.",
+    },
+    { tool: "finish", reason: "Card blocked and reissued.", outputs: { confirmation: "Card reissued" } },
+  ];
+}
+
 /** Westside re-discovery: same flow, longer accessible names. */
 export function scriptedWestsideFileByMerchant(): AgentDecision[] {
   return [

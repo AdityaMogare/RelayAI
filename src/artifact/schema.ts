@@ -200,6 +200,21 @@ export const VENDOR_EXCEPTIONS = [
   },
 ];
 
+export const CARD_EXCEPTIONS = [
+  {
+    detect: { textIncludes: "Card already blocked" },
+    classify: "business_outcome" as const,
+    code: "CARD_ALREADY_BLOCKED",
+    message: "This card was already blocked and cannot be blocked again.",
+  },
+  {
+    detect: { textIncludes: "Business account — supervisor required" },
+    classify: "needs_human" as const,
+    code: "SUPERVISOR_REQUIRED",
+    message: "This card sits on a business account and requires a supervisor.",
+  },
+];
+
 export const DISPUTE_EXCEPTIONS = [
   {
     detect: { textIncludes: "Dispute not found" },

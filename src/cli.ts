@@ -3,7 +3,7 @@ import { Command, CommanderError } from "commander";
 import { DiscoveryAgent } from "./agent/discover.ts";
 import { createLlmClient, ScriptedLlm } from "./agent/providers.ts";
 import { rediscover } from "./agent/rediscover.ts";
-import { scriptedFileByMerchant, scriptedLookup } from "./agent/scripts.ts";
+import { scriptedBlockAndReissue, scriptedFileByMerchant, scriptedLookup } from "./agent/scripts.ts";
 import { approveCapability, assertTwoPersonApproval, reviewCapability } from "./artifact/review.ts";
 import { FileArtifactStore } from "./artifact/store.ts";
 import { capabilityToTool } from "./artifact/tools.ts";
@@ -73,6 +73,13 @@ function skinForTenant(tenant: string | undefined): ConsoleSkin | undefined {
   return undefined;
 }
 
+/** Card/block/reissue/CAMS before Jane Doe — a CAMS goal that names Jane would otherwise pick the dispute script. */
+function scriptedDecisionsForGoal(goal: string) {
+  if (/block-and-reissue|\breissue\b|\bCAMS\b|\bblock\b/i.test(goal)) return scriptedBlockAndReissue();
+  if (/ACME|Jane Doe/i.test(goal)) return scriptedFileByMerchant();
+  return scriptedLookup();
+}
+
 const program = new Command();
 program.exitOverride();
 program.name("relayai").description("Discover once with an LLM, replay forever without one.");
@@ -96,7 +103,7 @@ jsonFlag(
   await surface.launch();
   const store = new FileArtifactStore();
   const llm = opts.scripted
-    ? new ScriptedLlm(/ACME|Jane Doe/i.test(String(opts.goal)) ? scriptedFileByMerchant() : scriptedLookup())
+    ? new ScriptedLlm(scriptedDecisionsForGoal(String(opts.goal)))
     : createLlmClient({ provider: opts.provider, model: opts.model });
   const control = new ControlPlane(
     surface,

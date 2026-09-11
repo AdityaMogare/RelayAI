@@ -1,0 +1,476 @@
+{
+  "schemaVersion": "1.1",
+  "id": "block-and-reissue-card",
+  "name": "Block And Reissue Card",
+  "description": "Block And Reissue Card",
+  "version": 1,
+  "app": {
+    "vendorId": "relay-core",
+    "surfaceKind": "legacy-web"
+  },
+  "parameters": [
+    {
+      "name": "memberId",
+      "type": "string",
+      "description": "Value typed into Member ID during discovery.",
+      "sensitive": false
+    },
+    {
+      "name": "last4",
+      "type": "string",
+      "description": "Value typed into Card last 4 during discovery.",
+      "sensitive": false
+    }
+  ],
+  "outputs": [
+    {
+      "name": "confirmation",
+      "type": "string",
+      "locator": {
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
+      },
+      "pii": true
+    }
+  ],
+  "auth": {
+    "credentialRef": "vault://tenant-9/teller"
+  },
+  "approval": {
+    "requestedBy": "analyst@relay",
+    "approvedBy": "risk@relay",
+    "approvedAt": "2026-09-10T17:00:00.000Z"
+  },
+  "sideEffects": {
+    "kind": "irreversible",
+    "compensation": "A teller must reverse this in the core. Automation cannot undo Confirm."
+  },
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": {
+      "kind": "titleIncludes",
+      "expect": "Relay Credit Union — Member Servicing"
+    }
+  },
+  "uses": [],
+  "provenance": {
+    "discoveredAt": "2026-09-11T17:40:00.374Z",
+    "discoveredBy": "human",
+    "model": "scripted",
+    "promptHash": "6e432be36ada62a48aee3b7852fe0a490e6db7650ed03b37a89467e595e4baf2",
+    "evidenceRunId": "discover-block-and-reissue",
+    "goal": "Block and reissue the debit card ending 4412 for member 12345 in CAMS."
+  },
+  "idempotencyKeyFrom": [
+    "memberId",
+    "last4"
+  ],
+  "steps": [
+    {
+      "id": "s00-navigate",
+      "action": "navigate",
+      "url": "http://127.0.0.1:54399/",
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "titleIncludes",
+        "expect": "Relay Credit Union — Member Servicing"
+      },
+      "note": "Entry point for this vendor console.",
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s01-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Member ID"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Member ID"
+          },
+          {
+            "by": "text",
+            "text": "Member ID"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Member ID\"]"
+          }
+        ]
+      },
+      "inputFrom": "parameters.memberId",
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s02-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Search"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Search"
+          },
+          {
+            "by": "text",
+            "text": "Search"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Search\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s03-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "CAMS"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "CAMS"
+          },
+          {
+            "by": "text",
+            "text": "CAMS"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"CAMS\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId/cards"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s04-type",
+      "action": "type",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "textbox",
+          "name": "Card last 4"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Card last 4"
+          },
+          {
+            "by": "text",
+            "text": "Card last 4"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Card last 4\"]"
+          }
+        ]
+      },
+      "inputFrom": "parameters.last4",
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s05-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Open by last 4"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Open by last 4"
+          },
+          {
+            "by": "text",
+            "text": "Open by last 4"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Open by last 4\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId/cards/:last4"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s06-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "link",
+          "name": "Block Card"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Block Card"
+          },
+          {
+            "by": "text",
+            "text": "Block Card"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Block Card\"]"
+          }
+        ]
+      },
+      "risk": "safe",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId/cards/:last4/block"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s07-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Confirm"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirm"
+          },
+          {
+            "by": "text",
+            "text": "Confirm"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirm\"]"
+          }
+        ]
+      },
+      "risk": "risky",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId/cards/:last4/reissue"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s08-click",
+      "action": "click",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "button",
+          "name": "Confirm"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirm"
+          },
+          {
+            "by": "text",
+            "text": "Confirm"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirm\"]"
+          }
+        ]
+      },
+      "risk": "risky",
+      "checkpoint": {
+        "kind": "urlIncludes",
+        "expect": "/member/:memberId/cards/:last4/done"
+      },
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    },
+    {
+      "id": "s09-extract",
+      "action": "extract",
+      "target": {
+        "primary": {
+          "by": "role",
+          "role": "status",
+          "name": "Confirmation"
+        },
+        "fallbacks": [
+          {
+            "by": "label",
+            "name": "Confirmation"
+          },
+          {
+            "by": "text",
+            "text": "Confirmation"
+          },
+          {
+            "by": "css",
+            "selector": "[aria-label=\"Confirmation\"]"
+          }
+        ]
+      },
+      "outputName": "confirmation",
+      "risk": "safe",
+      "timeoutMs": 8000,
+      "retryBudget": 3
+    }
+  ],
+  "exceptionalStates": [
+    {
+      "detect": {
+        "textIncludes": "Member not found"
+      },
+      "classify": "business_outcome",
+      "code": "MEMBER_NOT_FOUND",
+      "message": "No member record matches the supplied ID."
+    },
+    {
+      "detect": {
+        "textIncludes": "Permission denied"
+      },
+      "classify": "business_outcome",
+      "code": "PERMISSION_DENIED",
+      "message": "The operator is not authorized to view this member."
+    },
+    {
+      "detect": {
+        "textIncludes": "Member ID is required"
+      },
+      "classify": "business_outcome",
+      "code": "VALIDATION_ERROR",
+      "message": "The form rejected the input."
+    },
+    {
+      "detect": {
+        "dialogTitle": "System Notice"
+      },
+      "classify": "recoverable",
+      "code": "SYSTEM_NOTICE",
+      "message": "A known interstitial is blocking the work area.",
+      "recoverAction": {
+        "action": "dismiss",
+        "target": {
+          "primary": {
+            "by": "role",
+            "role": "button",
+            "name": "Dismiss"
+          }
+        }
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Session expired"
+      },
+      "classify": "needs_human",
+      "code": "SESSION_EXPIRED",
+      "message": "The teller session expired and cannot continue safely."
+    },
+    {
+      "detect": {
+        "textIncludes": "temporarily unavailable"
+      },
+      "classify": "transient",
+      "code": "CORE_UNAVAILABLE",
+      "message": "The servicing host is temporarily unavailable.",
+      "recoverAction": {
+        "action": "wait",
+        "ms": 200
+      }
+    },
+    {
+      "detect": {
+        "textIncludes": "Card already blocked"
+      },
+      "classify": "business_outcome",
+      "code": "CARD_ALREADY_BLOCKED",
+      "message": "This card was already blocked and cannot be blocked again."
+    },
+    {
+      "detect": {
+        "textIncludes": "Business account — supervisor required"
+      },
+      "classify": "needs_human",
+      "code": "SUPERVISOR_REQUIRED",
+      "message": "This card sits on a business account and requires a supervisor."
+    }
+  ],
+  "antiCheckpoints": [
+    {
+      "kind": "textIncludes",
+      "expect": "Wrong screen"
+    },
+    {
+      "kind": "textIncludes",
+      "expect": "Screen not found"
+    }
+  ],
+  "success": {
+    "checkpoint": {
+      "kind": "textIncludes",
+      "expect": "Card reissued"
+    }
+  }
+}

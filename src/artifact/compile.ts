@@ -1,6 +1,6 @@
 import type { Action, ArtifactStep, Capability, LocatorScope, Observation, Provenance } from "../core/types.ts";
 import { looksSensitive } from "../policy/redact.ts";
-import { canonicalizeUrl } from "./canonical.ts";
+import { canonicalizePath, canonicalizeUrl } from "./canonical.ts";
 import { checkpointFromDelta, EMPTY_OBSERVATION } from "./checkpoint.ts";
 import {
   CURRENT_SCHEMA_VERSION,
@@ -11,7 +11,7 @@ import {
   VENDOR_ANTI_CHECKPOINTS,
 } from "./defaults.ts";
 import { rankedTarget, rankedTargetFrom } from "./ranked.ts";
-import { DISPUTE_EXCEPTIONS, VENDOR_EXCEPTIONS } from "./schema.ts";
+import { CARD_EXCEPTIONS, DISPUTE_EXCEPTIONS, VENDOR_EXCEPTIONS } from "./schema.ts";
 
 export type RecordedStep = {
   action: Action;
@@ -49,17 +49,37 @@ function paramType(name: string, matched: string): "string" | "number" {
   return /^\d+$/.test(matched) ? "number" : "string";
 }
 
+function isDisputeCapability(id: string, goal: string): boolean {
+  return /dispute/i.test(id) || /dispute/i.test(goal);
+}
+
+function isCardCapability(id: string, goal: string): boolean {
+  return /block-and-reissue|\breissue\b|\bCAMS\b|\bcard\b/i.test(id) || /block-and-reissue|\breissue\b|\bCAMS\b|\bcard\b/i.test(goal);
+}
+
 function exceptionsFor(id: string, goal: string) {
-  const dispute = /dispute/i.test(id) || /dispute/i.test(goal);
-  return dispute ? [...VENDOR_EXCEPTIONS, ...DISPUTE_EXCEPTIONS] : VENDOR_EXCEPTIONS;
+  if (isDisputeCapability(id, goal)) return [...VENDOR_EXCEPTIONS, ...DISPUTE_EXCEPTIONS];
+  if (isCardCapability(id, goal)) return [...VENDOR_EXCEPTIONS, ...CARD_EXCEPTIONS];
+  return VENDOR_EXCEPTIONS;
 }
 
 function successExpect(id: string, outputs: Record<string, string>): string {
   const confirmation = outputs.confirmation?.toLowerCase() ?? "";
   if (/dispute/i.test(id) || confirmation.includes("dispute")) return "Dispute filed";
   if (confirmation.includes("sub-account") || /sub-account/i.test(id)) return "Sub-account opened";
+  if (
+    confirmation.includes("reissued") ||
+    confirmation.includes("card reissued") ||
+    /block-and-reissue|\breissue\b|\bCAMS\b/i.test(id)
+  ) {
+    return "Card reissued";
+  }
   if (outputs.savingsBalance || /lookup|savings/i.test(id)) return "Savings Balance";
   return "Member";
+}
+
+function paramNameFromField(field: string): string {
+  return ROW_HEADER_PARAM[field.trim().toLowerCase()] ?? toCamel(field);
 }
 
 function budget(step: Omit<ArtifactStep, "timeoutMs" | "retryBudget">): ArtifactStep {
@@ -92,14 +112,15 @@ function rowScope(
   const row = rec.row;
   if (!row || row.cells.length === 0) return undefined;
   const name = rec.action.target?.primary.name ?? rec.usedLocatorName ?? "";
-  if (name && !GENERIC_CONTROL.test(name) && rec.action.name !== "click") return undefined;
+  // Named controls (Block Card, Confirm, Search) are unique; only generic row-pickers (Open) need scope.
+  if (name && !GENERIC_CONTROL.test(name)) return undefined;
   const hasText: string[] = [];
   row.headers.forEach((header, i) => {
     const key = ROW_HEADER_PARAM[header.trim().toLowerCase()];
     const cell = row.cells[i]?.trim() ?? "";
     if (!key || !cell) return;
     ensureParam(parameters, seen, key, cell, `Identifying cell from the ${header} column.`);
-    paramValues[key] = cell;
+    if (!(key in paramValues)) paramValues[key] = cell;
     hasText.push(`:${key}`);
   });
   if (hasText.length === 0 && GENERIC_CONTROL.test(name)) {
@@ -148,7 +169,7 @@ export function compileArtifact(input: {
 
     if ((rec.action.name === "type" || rec.action.name === "select") && value) {
       const field = rec.action.target?.primary.name ?? rec.usedLocatorName ?? "value";
-      const name = toCamel(field);
+      const name = paramNameFromField(field);
       ensureParam(
         parameters,
         seenParams,
@@ -207,6 +228,12 @@ export function compileArtifact(input: {
 
   for (const step of steps) {
     if (step.url) step.url = canonicalizeUrl(step.url, paramValues);
+    if (step.checkpoint?.expect) {
+      step.checkpoint = {
+        ...step.checkpoint,
+        expect: canonicalizePath(step.checkpoint.expect, paramValues),
+      };
+    }
   }
 
   const avoid = [...new Set([...Object.values(paramValues), ...valuesFromGoal(input.goal)])];
