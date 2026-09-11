@@ -4,11 +4,11 @@
 
 RelayAI is a single Node process with five seams: **Surface**, **LLM**, **Artifact**, **Policy**, and **Control**. Discovery and replay share the Surface and Policy; only discovery calls an LLM. That is the product claim in code form: the model discovers, the artifact is the capability, replay is production.
 
-A CLI wires the adapters. There is no queue, no service mesh, and no application database — on purpose. **Artifacts and runs are different lifecycles, so they are different stores.** Capabilities are versioned JSON in `capabilities/`, reviewed in PRs like code. Successful mutating runs append one line to `runs/ledger.jsonl`. A reviewer diffs a capability; an operator greps a ledger. Putting both in Postgres would mix an editable contract with append-only operational data.
+A CLI wires the adapters. There is no queue, no service mesh, and no application database — on purpose. **Artifacts and runs are different lifecycles, so they are different stores.** Capabilities are versioned JSON in `capabilities/`, reviewed in PRs like code. Successful mutating runs append one line to `runs/ledger.jsonl` (generated on the first mutating run; a sample line is committed so a fresh clone has something to grep). A reviewer diffs a capability; an operator greps a ledger. Putting both in Postgres would mix an editable contract with append-only operational data.
 
 Between sequenced capabilities, state does not live in the artifact. It lives on the **Surface** (the live browser session: URL, cookies, DOM) and in the **invocation bag** (typed outputs the caller passes to the next invoke). `uses` runs children on that same Surface, so lookup's member page is still there when file-dispute clicks Disputes. A one-shot CLI `replay` is one session; a calling agent that wants three capabilities in sequence keeps the Surface and the bag.
 
-The Surface port (`observe` / `act` / `pause` / `resume`) is the heterogeneity boundary. Playwright implements it for this submission; a desktop adapter would not change the artifact or the replay engine. The LLM port is similarly swappable (Anthropic, OpenAI, or a scripted client for tests).
+The Surface port (`observe` / `act` / `pause` / `resume`) is the heterogeneity boundary. Playwright implements it for the credit-union console; `DesktopSurface` resolves the same locators against a fake OS accessibility tree (`npm run desktop-replay`) and does not change the artifact or the replay engine. The LLM port is similarly swappable (Anthropic, OpenAI, or a scripted client for tests).
 
 Trade-off: headed Playwright is required for a real live-session handoff, which makes unattended CI use headless plus an auto-resume waiter. I accepted that split rather than fake the session.
 
@@ -219,7 +219,7 @@ The waiter is a local operator console (`:3847`): queue, claim, live URL + scree
 
 One Playwright session can be `in_control` of at most one intervention. A second capability that escalates on the same surface is abandoned with a pointer to the holder. The operator console queues the rest: dispute filing outranks sub-account opening; unclaimed items stay `raised` until claimed or the TTL fires.
 
-Risky confirms are conservative: unattended replay *blocks* rather than clicking Confirm in the dark. `/evidence/escalate-verify-and-file-dispute` is the bar artifact: `teller01` takes the live session, files DSP-1001, hands back `completed_by_human`, automation skips, and a real `node:sqlite` `SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'` equals 1. The intervention stamps `operatorKind: "scripted"` when the waiter is `humanCompletesRiskyStep` — the 200ms claim-to-return is honest, not a teller. A headed operator-console claim stamps `human`.
+Risky confirms are conservative: unattended replay *blocks* rather than clicking Confirm in the dark. `/evidence/escalate-verify-and-file-dispute` is the scripted bar: `teller01` takes the live session, files DSP-1001, hands back `completed_by_human`, automation skips, and a real `node:sqlite` `SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'` equals 1. That waiter stamps `operatorKind: "scripted"` — the 200ms claim-to-return is honest, not a teller. `/evidence/escalate-human-handoff/` is the headed operator-console claim: `teller01` claimed on :3847 (`operatorKind: "human"`), then TTL expired before return and Confirm was not executed. Folder name and `operatorKind` match.
 
 What is real: the lock, the same browser context, the lifecycle record, operator identity, disposition, TTL abort, before/after handoff capture, skip-vs-execute reconciliation, app-side write count. What is mocked: co-browse, keystroke capture, and any phone channel.
 
@@ -247,13 +247,32 @@ Risk lives on the step, stamped at approval. Runtime keyword matching is how you
 
 ### Probes
 
-**Regulator asks what this automation touched for member 12345 last Tuesday.** `npm run audit -- --member 12345 --from 2026-09-08 --to 2026-09-09` reads `runs/ledger.jsonl`: capability, tenant, credentialRef, routes (`/member/12345`, `/member/12345/disputes/...`), status. That ledger is the answer, not a raw a11y dump.
+**Regulator asks what this automation touched for member 12345 last Tuesday.** `npm run audit -- --member 12345 --from 2026-09-08 --to 2026-09-09` reads `runs/ledger.jsonl`: capability, tenant, credentialRef, routes (`/member/12345`, `/member/12345/disputes/...`), status. A sample line is committed; live mutating runs append. That ledger is the answer, not a raw a11y dump.
 
 **Where do credentials come from during replay?** `capability.auth.credentialRef` → vault resolve at process start. Never from the JSON on disk as a password literal.
 
 **Someone commits a capability with a risky step marked safe. What catches it?** The approval gate and the diff (`reviewCapability` / `npm run review`), not the runtime. Replay will click whatever `step.risk` says.
 
 **Your redaction is regex. What does it miss?** Jane Doe. `$4,250.00`. Any name or amount that is not an SSN / bearer / `ACCT-` token. That is why outputs are classified `pii: true`. The persisted payoff is `{ currency: "USD", minor: "[REDACTED]" }`, not a deleted field.
+
+## Traceability
+
+Requirement → module → evidence. One row each.
+
+| Brief | Code | Evidence |
+|---|---|---|
+| Goal without the answer | `src/agent/scripts.ts` (`JANE_DOE_DISPUTE_GOAL`), `src/artifact/compile.ts` | `discovery-verify-and-file-dispute/`, `capabilities/verify-and-file-dispute.json` |
+| §3.3 recoverable retry | `src/replay/retry.ts`, `src/replay/classifier.ts` | `replay-recoverable-notice/`, `replay-recoverable-exhausted/` |
+| §3.3 framesets / sibling cells | `src/surfaces/locators.ts` (`locateInFrames`), `tests/legacy.test.ts` | `discovery-legacy-frameset/`, `replay-legacy-hostile/` |
+| §3.4 allowlist | `policy/allowlist.yaml`, `src/surfaces/web.ts` `route()` | `policy-blocked-admin-wire/` |
+| §3.6 handoff | `src/escalation/lifecycle.ts`, `src/replay/handoff.ts`, `src/escalation/operator.ts` | `escalate-human-handoff/` (`operatorKind: "human"`), `escalate-verify-and-file-dispute/` (`scripted`) |
+| §3.7 overlay / drift | `src/overlay/`, `overlays/tenants/` | `replay-tenant-westside/`, `rediscover-verify-and-file-dispute/` |
+| Typed outputs | `src/replay/outputs.ts` | `replay-lookup-success/`, `replay-output-empty-amount/` |
+| Exception classes | `src/replay/classifier.ts` | `replay-lookup-not-found/`, `replay-needs-human-expired/`, `replay-hard-failure-locator/` |
+| Idempotency / ledger | `src/replay/ledger.ts` | `runs/ledger.jsonl`, `replay-verify-dispute-already-filed/`, `replay-batch-idempotency/` |
+| Blast radius | `src/policy/runtime.ts`, `policy/runtime.yaml` | `replay-batch-cap-exceeded/`, `replay-batch-reissue-40/` |
+| Desktop surface | `src/surfaces/desktop.ts` | `npm run desktop-replay`, `tests/desktop.test.ts` |
+| Cost / soak | `src/evidence/duration.ts` | `cost-comparison.json`, `stability-50/` |
 
 ## 7. Cuts
 

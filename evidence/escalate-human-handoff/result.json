@@ -1,0 +1,87 @@
+{
+  "status": "failed",
+  "classify": "hard_failure",
+  "code": "UNCAUGHT",
+  "stepId": "uncaught",
+  "expected": "run completed without error",
+  "observed": "page.waitForTimeout: Target page, context or browser has been closed",
+  "message": "Step uncaught failed.",
+  "outputs": {
+    "savingsBalance": {
+      "currency": "USD",
+      "minor": "[REDACTED]"
+    }
+  },
+  "locatorHits": [
+    {
+      "stepId": "s01-type",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "textbox",
+        "name": "Member ID"
+      }
+    },
+    {
+      "stepId": "s02-click",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Search"
+      }
+    },
+    {
+      "stepId": "s03-extract",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "cell",
+        "name": "Savings Balance"
+      }
+    },
+    {
+      "stepId": "s03-open",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "link",
+        "name": "Open Sub-Account"
+      }
+    },
+    {
+      "stepId": "s04-product",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "combobox",
+        "name": "Product"
+      }
+    },
+    {
+      "stepId": "s05-continue",
+      "rank": 1,
+      "by": "role",
+      "locator": {
+        "by": "role",
+        "role": "button",
+        "name": "Continue"
+      }
+    }
+  ],
+  "needsRediscovery": false,
+  "confidence": 1,
+  "evidencePath": "/Users/adityamogare/RelayAI/evidence/escalate-human-handoff",
+  "metrics": {
+    "durationMs": 123495,
+    "modelCalls": 0,
+    "inputTokens": "[REDACTED]",
+    "outputTokens": "[REDACTED]",
+    "costUsd": 0
+  }
+}

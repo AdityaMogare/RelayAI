@@ -1,5 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, copyFileSync, cpSync } from "node:fs";
-import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { FileArtifactStore, MemoryArtifactStore } from "../src/artifact/store.ts";
@@ -163,24 +162,6 @@ function countDecides(runId: string): { model: string; calls: number; durationMs
   const logPath = resolve(ROOT, runId, "log.jsonl");
   if (!existsSync(logPath)) return { model: "unknown", calls: 0, durationMs: 0 };
   return countDiscovers(parseJsonl(readFileSync(logPath, "utf8")));
-}
-
-function stitchGif(dir: string, frames: string[], outName: string): string | undefined {
-  const existing = frames.filter((name) => existsSync(join(dir, name)));
-  if (existing.length < 2) return undefined;
-  const out = join(dir, outName);
-  const args = ["-y"];
-  for (const name of existing) {
-    args.push("-loop", "1", "-t", "1.2", "-i", join(dir, name));
-  }
-  const concat = existing.map((_, i) => `[${i}:v]`).join("");
-  args.push("-filter_complex", `${concat}concat=n=${existing.length}:v=1:a=0,format=rgb8`, "-r", "1", out);
-  const result = spawnSync("ffmpeg", args, { encoding: "utf8" });
-  if (result.status !== 0 || !existsSync(out)) {
-    console.log("ffmpeg gif skipped", result.stderr?.slice(0, 200));
-    return undefined;
-  }
-  return out;
 }
 
 function stampDiscoveryHash(runId: string, capabilityPath: string, contentHash: string): void {
@@ -722,33 +703,7 @@ try {
     );
   });
 
-  await withSurface(async (surface) => {
-    const evidence = reset("escalate-verify-and-file-dispute-human");
-    const control = new ControlPlane(
-      surface,
-      evidence,
-      humanCompletesRiskyStep("teller01", async () => {
-        const clicked = await surface.actAsHuman({
-          name: "click",
-          target: { primary: { by: "role", role: "button", name: "Confirm" } },
-        });
-        if (!clicked.ok) throw new Error(clicked.error ?? "operator Confirm failed");
-      }),
-    );
-    const result = await new ReplayEngine(surface, evidence).run(dispute.capability, {
-      inputs: { memberId: "12345", merchant: "ACME POS", last4: "4412", reason: "Unauthorized" },
-      baseUrl,
-      control,
-      artifactPath: dispute.path,
-      contentHash: dispute.contentHash,
-    });
-    const gif = stitchGif(evidence.dir, ["handoff-before.png", "handoff-after.png"], "handoff.gif");
-    if (gif) {
-      const shared = resolve(ROOT, "escalate-verify-and-file-dispute", "handoff.gif");
-      copyFileSync(gif, shared);
-    }
-    console.log("human escalate gif", result.status, gif ?? "no-ffmpeg");
-  });
+  // escalate-human-handoff/ is a headed operator-console claim (operatorKind: human). Do not regenerate it here.
 
   // batch-40 is uncapped: runtime.yaml is 30/hr, which would stop a 40-invoke soak.
   // A fresh RateLimiter is not wired here. replay-batch-cap-exceeded uses the 30/hr lever.
@@ -978,7 +933,7 @@ Open \`index.html\` for the catalog (status, code, duration, locator ranks, trac
 | \`cost-comparison.json\` | Discovery vs replay. Lead with cost and human time, not wall-clock speedup. Duration is \`discover.start\` → \`discover.end\`. |
 | \`escalate-open-sub-account/\` | Risky Confirm: pause, auto-resume. \`operatorKind: "scripted"\`. Sub-account Confirm is a real POST that inserts into \`sub_accounts\`. |
 | \`escalate-verify-and-file-dispute/\` | **HITL mechanism.** \`humanCompletesRiskyStep\` takes the lock and clicks Confirm on the live session. The record stamps \`operatorKind: "scripted"\` — timestamps in the hundreds of milliseconds are not a teller. \`filings-proof.json\` is a real \`node:sqlite\` count. |
-| \`escalate-verify-and-file-dispute-human/\` | Same scripted waiter plus a stitched \`handoff.gif\` of before/after frames. A genuine headed click is \`RELAY_HEADED=1 npm run escalate-demo -- --capability capabilities/verify-and-file-dispute.json\` with the operator console at :3847; that path stamps \`operatorKind: "human"\`. |
+| \`escalate-human-handoff/\` | Headed operator-console claim. \`teller01\` claimed on :3847 (\`operatorKind: "human"\`). TTL expired before return; Confirm was not executed. That is the real human path, not a 200ms scripted click. |
 | \`replay-verify-dispute-success/\` | Deterministic replay of \`capabilities/verify-and-file-dispute.json\` for ACME POS / 4412. No LLM. Confirm is approved via \`--approve-risky\`. |
 | \`replay-verify-dispute-not-found/\` | Same capability file, \`merchant=NO-SUCH\` / \`last4=0000\`, classified as \`business_outcome\` / \`DISPUTE_NOT_FOUND\`. |
 | \`replay-recoverable-notice/\` | \`?notice=1\`: dismiss the System Notice, then **retry the same step**. Status \`success\`. |

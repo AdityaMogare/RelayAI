@@ -30,7 +30,7 @@ const SCENARIOS: Record<string, string> = {
   "stability-50": "N=50 lookup soak",
   "escalate-open-sub-account": "Risky Confirm auto-resume",
   "escalate-verify-and-file-dispute": "HITL Confirm; filings count = 1",
-  "escalate-verify-and-file-dispute-human": "HITL Confirm visualized as GIF",
+  "escalate-human-handoff": "Headed operator-console claim; operatorKind human",
   "replay-verify-dispute-success": "Deterministic DSP-1001 file",
   "replay-verify-dispute-not-found": "DSP-9999 → DISPUTE_NOT_FOUND",
   "replay-recoverable-notice": "?notice=1 dismiss and retry",

@@ -4,6 +4,12 @@
 
 A computer-use system for the long tail of bank back-office apps that have no API: an LLM discovers a flow once, the run is compiled into a typed capability, and production invokes that capability by deterministic replay — no model in the loop.
 
+```bash
+npm ci && npm run verify    # 27 rows, no API key, ~40s
+```
+
+Discovery cost $0.09 and 13 model calls, once. Every invocation since has cost $0.00 and called no model — 50 consecutive replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case.
+
 This is a take-home vertical slice, not a product. It automates a local credit-union servicing console. The default skin is the modern recorded chrome (so the three golden capabilities stay green). `?legacy=1` is a real frameset with sibling-cell balances and rotating ASP.NET ids; `?tenant=westside` is a third skin on the same process. Auth (`startConsole(0, { auth: true })`) is `/login` + a 90s session cookie.
 
 ## What it does
@@ -145,7 +151,7 @@ npm run escalate-demo
 RELAY_AUTO_RESUME_MS=8000 npm run escalate-demo -- --auto-resume-ms 8000
 ```
 
-The reviewable HITL artifact is `/evidence/escalate-verify-and-file-dispute`: the waiter takes the lock and clicks Confirm (`operatorKind: "scripted"`), automation skips, and `filings-proof.json` is a real `node:sqlite` count. A headed operator-console claim stamps `human`. Open `evidence/index.html` for the full catalog.
+The reviewable HITL artifacts are `/evidence/escalate-verify-and-file-dispute` (`operatorKind: "scripted"`, sqlite filings count = 1) and `/evidence/escalate-human-handoff` (headed operator-console claim, `operatorKind: "human"`). Open `evidence/index.html` for the full catalog.
 
 Agent-facing catalog:
 

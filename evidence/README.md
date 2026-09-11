@@ -29,7 +29,7 @@ Open `index.html` for the catalog (status, code, duration, locator ranks, traces
 | `cost-comparison.json` | Discovery vs replay. Lead with cost and human time, not wall-clock speedup. Duration is `discover.start` → `discover.end`. |
 | `escalate-open-sub-account/` | Risky Confirm: pause, auto-resume. `operatorKind: "scripted"`. Sub-account Confirm is a real POST that inserts into `sub_accounts`. |
 | `escalate-verify-and-file-dispute/` | **HITL mechanism.** `humanCompletesRiskyStep` takes the lock and clicks Confirm on the live session. The record stamps `operatorKind: "scripted"` — timestamps in the hundreds of milliseconds are not a teller. `filings-proof.json` is a real `node:sqlite` count. |
-| `escalate-verify-and-file-dispute-human/` | Same scripted waiter plus a stitched `handoff.gif` of before/after frames. A genuine headed click is `RELAY_HEADED=1 npm run escalate-demo -- --capability capabilities/verify-and-file-dispute.json` with the operator console at :3847; that path stamps `operatorKind: "human"`. |
+| `escalate-human-handoff/` | Headed operator-console claim. `teller01` claimed on :3847 (`operatorKind: "human"`). TTL expired before return; Confirm was not executed. That is the real human path, not a 200ms scripted click. |
 | `replay-verify-dispute-success/` | Deterministic replay of `capabilities/verify-and-file-dispute.json` for ACME POS / 4412. No LLM. Confirm is approved via `--approve-risky`. |
 | `replay-verify-dispute-not-found/` | Same capability file, `merchant=NO-SUCH` / `last4=0000`, classified as `business_outcome` / `DISPUTE_NOT_FOUND`. |
 | `replay-recoverable-notice/` | `?notice=1`: dismiss the System Notice, then **retry the same step**. Status `success`. |

@@ -1,0 +1,50 @@
+{
+  "reason": "Risky/irreversible step requires human approval.",
+  "capabilityId": "open-sub-account",
+  "stepId": "s06-confirm",
+  "url": "http://127.0.0.1:3000/member/12345/sub-account?product=Share+Savings&step=review",
+  "screenshotPath": "/Users/adityamogare/RelayAI/evidence/escalate-human-handoff/escalate-s06-confirm.png",
+  "checkpointExpect": "textIncludes \"Sub-account opened\"",
+  "sessionId": "efd90f39-e120-494f-939f-51754672062a",
+  "entryCheckpoint": {
+    "kind": "urlIncludes",
+    "expect": "/member/12345/sub-account"
+  },
+  "id": "ad21052d-9ef3-4a11-96af-5398fb77470d",
+  "createdAt": "2026-09-11T03:35:30.169Z",
+  "state": "abandoned",
+  "ttlMs": 120000,
+  "expiresAt": "2026-09-11T03:37:30.169Z",
+  "queuePriority": 20,
+  "transitions": [
+    {
+      "state": "raised",
+      "at": "2026-09-11T03:35:30.169Z",
+      "note": "Risky/irreversible step requires human approval."
+    },
+    {
+      "state": "claimed",
+      "at": "2026-09-11T03:35:51.107Z",
+      "operatorId": "teller01",
+      "note": "teller01 claimed"
+    },
+    {
+      "state": "in_control",
+      "at": "2026-09-11T03:35:51.109Z",
+      "operatorId": "teller01",
+      "note": "teller01 in_control"
+    },
+    {
+      "state": "abandoned",
+      "at": "2026-09-11T03:37:30.202Z",
+      "operatorId": "teller01",
+      "note": "intervention TTL expired; session released without executing the risky step"
+    }
+  ],
+  "operatorId": "teller01",
+  "stepDisposition": "abort",
+  "claimedAt": "2026-09-11T03:35:51.107Z",
+  "operatorKind": "human",
+  "inControlAt": "2026-09-11T03:35:51.109Z",
+  "abandonedAt": "2026-09-11T03:37:30.202Z"
+}
