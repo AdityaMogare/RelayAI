@@ -139,8 +139,58 @@ export function cloneDisputes(): Dispute[] {
 /** Mutable default ledger for tests that do not start a console. */
 export const DISPUTES: Dispute[] = cloneDisputes();
 
+export type CardStatus = "active" | "blocked";
+export type CardAccountKind = "personal" | "business";
+
+export type Card = {
+  memberId: string;
+  last4: string;
+  product: string;
+  status: CardStatus;
+  accountKind: CardAccountKind;
+  holder: string;
+  caseNumber?: string;
+  /** Set when this console instance just blocked the card; seed blocked cards stay terminal. */
+  reissueReady?: boolean;
+};
+
+const CARD_SEED: Card[] = [
+  {
+    memberId: "12345",
+    last4: "4412",
+    product: "Debit Visa",
+    status: "active",
+    accountKind: "personal",
+    holder: "Jane Doe",
+  },
+  {
+    memberId: "12345",
+    last4: "7788",
+    product: "Debit Visa",
+    status: "blocked",
+    accountKind: "personal",
+    holder: "Jane Doe",
+  },
+  {
+    memberId: "12345",
+    last4: "3301",
+    product: "Business Mastercard",
+    status: "active",
+    accountKind: "business",
+    holder: "Jane Doe",
+  },
+];
+
+export function cloneCards(): Card[] {
+  return CARD_SEED.map((row) => ({ ...row }));
+}
+
+/** Mutable default ledger for tests that do not start a console. */
+export const CARDS: Card[] = cloneCards();
+
 export const SEARCH_PAGE_SIZE = 10;
 export const DISPUTE_PAGE_SIZE = 20;
+export const CARD_PAGE_SIZE = 20;
 
 export function lookupMember(id: string): Member | undefined {
   const q = id.trim();
@@ -203,6 +253,42 @@ export function markDisputeFiled(
 
 export function resetDisputes(rows: Dispute[] = DISPUTES): void {
   const fresh = cloneDisputes();
+  rows.splice(0, rows.length, ...fresh);
+}
+
+export function listCards(memberId: string, rows: Card[] = CARDS): Card[] {
+  return rows.filter((c) => c.memberId === memberId.trim());
+}
+
+export function lookupCard(memberId: string, last4: string, rows: Card[] = CARDS): Card | undefined {
+  const card = last4.trim();
+  return rows.find((c) => c.memberId === memberId.trim() && c.last4 === card);
+}
+
+export function markCardBlocked(memberId: string, last4: string, rows: Card[] = CARDS): Card | undefined {
+  const row = lookupCard(memberId, last4, rows);
+  if (!row) return undefined;
+  row.status = "blocked";
+  row.reissueReady = true;
+  return row;
+}
+
+export function markCardReissued(
+  memberId: string,
+  last4: string,
+  caseNumber: string,
+  rows: Card[] = CARDS,
+): Card | undefined {
+  const row = lookupCard(memberId, last4, rows);
+  if (!row) return undefined;
+  row.status = "blocked";
+  row.caseNumber = caseNumber;
+  row.reissueReady = false;
+  return row;
+}
+
+export function resetCards(rows: Card[] = CARDS): void {
+  const fresh = cloneCards();
   rows.splice(0, rows.length, ...fresh);
 }
 

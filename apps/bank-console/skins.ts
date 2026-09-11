@@ -26,6 +26,9 @@ export type ConsoleSkin = {
     open: string;
     fileDispute: string;
     continue: string;
+    cams: string;
+    blockCard: string;
+    reissueCard: string;
   };
 };
 
@@ -50,6 +53,9 @@ export const RELAY_SKIN: ConsoleSkin = {
     open: "Open",
     fileDispute: "File Dispute",
     continue: "Continue",
+    cams: "CAMS",
+    blockCard: "Block Card",
+    reissueCard: "Reissue Card",
   },
 };
 
@@ -74,6 +80,9 @@ export const CU_WEST_SKIN: ConsoleSkin = {
     open: "Open",
     fileDispute: "File Dispute",
     continue: "Continue",
+    cams: "Card Batch",
+    blockCard: "Block Plastic",
+    reissueCard: "Reissue Plastic",
   },
 };
 
@@ -99,6 +108,9 @@ export const WESTSIDE_SKIN: ConsoleSkin = {
   labels: {
     ...CU_WEST_SKIN.labels,
     disputes: "Card Claims",
+    cams: "Plastic Queue",
+    blockCard: "Block Plastic",
+    reissueCard: "Reissue Plastic",
   },
 };
 
@@ -126,6 +138,9 @@ export const WESTSIDE_DRIFT_SKIN: ConsoleSkin = {
     open: "Open Row",
     fileDispute: "File Dispute Now",
     continue: "Continue to Review",
+    cams: "Plastic Queue Desk",
+    blockCard: "Block Plastic Now",
+    reissueCard: "Reissue Plastic Now",
   },
 };
 

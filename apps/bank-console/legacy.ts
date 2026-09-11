@@ -118,6 +118,8 @@ export function workMember(m: Member): string {
         &nbsp;|&nbsp;
         <a href="/member/${m.id}/disputes">Disputes</a>
         &nbsp;|&nbsp;
+        <a href="/member/${m.id}/cards">CAMS</a>
+        &nbsp;|&nbsp;
         <a href="/frames/work?screen=search">New Search</a>
       </p>
     `,
@@ -154,3 +156,139 @@ export function workMemberResults(
     `,
   );
 }
+
+export function workCardList(
+  memberId: string,
+  rows: { last4: string; product: string; status: string; account: string }[],
+  error?: string,
+): string {
+  const err = error ? `<p class="err" role="alert">${error}</p>` : "";
+  const body =
+    rows.length === 0
+      ? `<p>No cards on this member.</p>`
+      : `<table>
+        <tr><th>Last 4</th><th>Product</th><th>Status</th><th>Account</th><th></th></tr>
+        ${rows
+          .map(
+            (r) => `<tr>
+            <td>${r.last4}</td>
+            <td>${r.product}</td>
+            <td>${r.status}</td>
+            <td>${r.account}</td>
+            <td><a href="/member/${memberId}/cards/${r.last4}">Open</a></td>
+          </tr>`,
+          )
+          .join("")}
+      </table>`;
+  return renderPage(
+    "Relay Credit Union — CAMS Card Batch",
+    `
+      <p>CAMS — Card Batch</p>
+      <p>Member ${memberId}</p>
+      ${err}
+      <form action="/member/${memberId}/cards/open" method="get">
+        <table>
+          <tr><td>Card last 4</td><td><input type="text" name="last4" aria-label="Card last 4" autocomplete="off"></td></tr>
+          <tr><td colspan="2"><button type="submit">Open by last 4</button></td></tr>
+        </table>
+      </form>
+      ${body}
+      <p><a href="/frames/work?screen=member&mid=${memberId}">Return to Member</a></p>
+    `,
+  );
+}
+
+export function workCardDetail(c: {
+  memberId: string;
+  last4: string;
+  product: string;
+  status: string;
+  accountKind: string;
+  holder: string;
+  caseNumber?: string;
+}): string {
+  const blocked = c.status === "blocked";
+  const business = c.accountKind === "business";
+  const alert = blocked
+    ? `<p class="err" role="alert">Card already blocked</p>
+       <p>Card ending ${c.last4} is already blocked${c.caseNumber ? `. Case ${c.caseNumber}` : ""}.</p>`
+    : business
+      ? `<p class="err" role="alert">Business account — supervisor required</p>
+         <p>This card sits on a business account. A supervisor must take the block and reissue.</p>`
+      : "";
+  const action =
+    blocked || business
+      ? ""
+      : `<p><a href="/member/${c.memberId}/cards/${c.last4}/block">Block Card</a></p>`;
+  return renderPage(
+    `Relay Credit Union — Card ${c.last4}`,
+    `
+      <p>Card ${c.last4}</p>
+      <p>Member ${c.memberId}</p>
+      ${alert}
+      <table>
+        <tr><td>Holder</td><td>${c.holder}</td></tr>
+        <tr><td>Product</td><td>${c.product}</td></tr>
+        <tr><td>Card Last 4</td><td>${c.last4}</td></tr>
+        <tr><td>Status</td><td>${blocked ? "Blocked" : "Active"}</td></tr>
+        <tr><td>Account</td><td>${business ? "Business" : "Personal"}</td></tr>
+      </table>
+      ${action}
+      <p><a href="/member/${c.memberId}/cards">Back to CAMS</a></p>
+    `,
+  );
+}
+
+export function workCardBusiness(memberId: string, last4: string): string {
+  return renderPage(
+    "Relay Credit Union — Supervisor required",
+    `
+      <p class="err" role="alert">Business account — supervisor required</p>
+      <p>Card ending ${last4} on member ${memberId} sits on a business account. A supervisor must take the block and reissue.</p>
+      <p><a href="/member/${memberId}/cards/${last4}">Back to Card</a></p>
+    `,
+  );
+}
+
+export function workCardBlock(memberId: string, last4: string, product: string, csrf: string): string {
+  return renderPage(
+    "Relay Credit Union — Confirm Card Block",
+    `
+      <p>Confirm Card Block</p>
+      <p>Blocking <strong>${product}</strong> ending <strong>${last4}</strong> for member ${memberId}.</p>
+      <p>This action is irreversible once confirmed.</p>
+      <form action="/member/${memberId}/cards/${last4}/block" method="post">
+        <input type="hidden" name="csrf" value="${csrf}">
+        <button type="submit">Confirm</button>
+        <a href="/member/${memberId}/cards/${last4}">Back</a>
+      </form>
+    `,
+  );
+}
+
+export function workCardReissue(memberId: string, last4: string, product: string, csrf: string): string {
+  return renderPage(
+    "Relay Credit Union — Confirm Card Reissue",
+    `
+      <p>Confirm Card Reissue</p>
+      <p>Reissuing <strong>${product}</strong> ending <strong>${last4}</strong> for member ${memberId}.</p>
+      <p>This action is irreversible once confirmed.</p>
+      <form action="/member/${memberId}/cards/${last4}/reissue" method="post">
+        <input type="hidden" name="csrf" value="${csrf}">
+        <button type="submit">Confirm</button>
+        <a href="/member/${memberId}/cards/${last4}">Back</a>
+      </form>
+    `,
+  );
+}
+
+export function workCardDone(memberId: string, last4: string, caseNumber: string): string {
+  return renderPage(
+    "Relay Credit Union — Card reissued",
+    `
+      <p class="ok" role="status" aria-label="Confirmation">Confirmation: Card ${last4} blocked and reissued. Case ${caseNumber}.</p>
+      <p><a href="/frames/work?screen=member&mid=${memberId}">Return to Member</a></p>
+    `,
+  );
+}
+

@@ -321,6 +321,8 @@ export function memberPage(m: {
         &nbsp;|&nbsp;
         <a href="/member/${m.id}/disputes">${skin.labels.disputes}</a>
         &nbsp;|&nbsp;
+        <a href="/member/${m.id}/cards">${skin.labels.cams}</a>
+        &nbsp;|&nbsp;
         <a href="/">New Search</a>
       </p>
     `),
@@ -578,6 +580,167 @@ export function disputeDone(memberId: string, disputeId: string, reason: string)
     chrome(`
       <h1>Dispute filed</h1>
       <p class="ok" role="status" aria-label="Confirmation">Confirmation: Dispute ${disputeId} filed (${reason}). Case CASE-77201.</p>
+      <p><a href="/member/${memberId}">Return to Member</a></p>
+    `),
+  );
+}
+
+export function cardListPage(
+  memberId: string,
+  rows: { last4: string; product: string; status: string; account: string }[],
+  error?: string,
+  opts: { page?: number; pages?: number } = {},
+): string {
+  const err = error ? `<p class="err" role="alert">${error}</p>` : "";
+  const body =
+    rows.length === 0
+      ? `<p>No cards on this member.</p>`
+      : `<table>
+        <tr><th>Last 4</th><th>Product</th><th>Status</th><th>Account</th><th></th></tr>
+        ${rows
+          .map(
+            (r) => `<tr>
+            <td>${r.last4}</td>
+            <td>${r.product}</td>
+            <td>${r.status}</td>
+            <td>${r.account}</td>
+            <td><a href="/member/${memberId}/cards/${r.last4}" aria-label="${currentSkin().labels.open}">${currentSkin().labels.open}</a></td>
+          </tr>`,
+          )
+          .join("")}
+      </table>`;
+  const prev =
+    opts.page && opts.page > 1 ? `<a href="/member/${memberId}/cards?page=${opts.page - 1}">Previous</a>` : "";
+  const next =
+    opts.page && opts.pages && opts.page < opts.pages
+      ? `<a href="/member/${memberId}/cards?page=${opts.page + 1}">Next</a>`
+      : "";
+  return shell(
+    `Relay Credit Union — CAMS Card Batch`,
+    chrome(`
+      <h1>CAMS — Card Batch</h1>
+      <p>Member ${memberId}</p>
+      ${err}
+      <form action="/member/${memberId}/cards/open" method="get">
+        <table>
+          <tr>
+            <td>Card last 4</td>
+            <td><input type="text" name="last4" aria-label="Card last 4" autocomplete="off"></td>
+          </tr>
+          <tr>
+            <td colspan="2"><button type="submit">Open by last 4</button></td>
+          </tr>
+        </table>
+      </form>
+      ${body}
+      <p>${prev} ${next}</p>
+      <p><a href="/member/${memberId}">Return to Member</a></p>
+    `),
+  );
+}
+
+export function cardNotFoundPage(memberId: string, last4: string): string {
+  return shell(
+    "Relay Credit Union — Card not found",
+    chrome(`
+      <p class="err" role="alert">Card not found</p>
+      <p>No card ending ${last4} exists for member ${memberId}.</p>
+      <p><a href="/member/${memberId}/cards">Back to CAMS</a></p>
+    `),
+  );
+}
+
+export function cardDetailPage(c: {
+  memberId: string;
+  last4: string;
+  product: string;
+  status: string;
+  accountKind: string;
+  holder: string;
+  caseNumber?: string;
+}): string {
+  const blocked = c.status === "blocked";
+  const business = c.accountKind === "business";
+  const alert = blocked
+    ? `<p class="err" role="alert">Card already blocked</p>
+       <p>Card ending ${c.last4} is already blocked${c.caseNumber ? `. Case ${c.caseNumber}` : ""}.</p>`
+    : business
+      ? `<p class="err" role="alert">Business account — supervisor required</p>
+         <p>This card sits on a business account. A supervisor must take the block and reissue.</p>`
+      : "";
+  const action =
+    blocked || business
+      ? ""
+      : `<p><a href="/member/${c.memberId}/cards/${c.last4}/block">${currentSkin().labels.blockCard}</a></p>`;
+  return shell(
+    `Relay Credit Union — Card ${c.last4}`,
+    chrome(`
+      <h1>Card ${c.last4}</h1>
+      <p>Member ${c.memberId}</p>
+      ${alert}
+      <table>
+        <tr><th>Holder</th><td aria-label="Holder">${c.holder}</td></tr>
+        <tr><th>Product</th><td aria-label="Product">${c.product}</td></tr>
+        <tr><th>Card Last 4</th><td aria-label="Card Last 4">${c.last4}</td></tr>
+        <tr><th>Status</th><td aria-label="Card Status">${blocked ? "Blocked" : "Active"}</td></tr>
+        <tr><th>Account</th><td aria-label="Account">${business ? "Business" : "Personal"}</td></tr>
+      </table>
+      ${action}
+      <p><a href="/member/${c.memberId}/cards">Back to CAMS</a></p>
+    `),
+  );
+}
+
+export function cardBusinessPage(memberId: string, last4: string): string {
+  return shell(
+    "Relay Credit Union — Supervisor required",
+    chrome(`
+      <h1>Supervisor required</h1>
+      <p class="err" role="alert">Business account — supervisor required</p>
+      <p>Card ending ${last4} on member ${memberId} sits on a business account. A supervisor must take the block and reissue. This console will not confirm it unattended.</p>
+      <p><a href="/member/${memberId}/cards/${last4}">Back to Card</a></p>
+    `),
+  );
+}
+
+export function cardBlockConfirm(memberId: string, last4: string, product: string, csrf: string): string {
+  return shell(
+    `Relay Credit Union — Confirm Card Block`,
+    chrome(`
+      <h1>Confirm Card Block</h1>
+      <p>Blocking <strong>${product}</strong> ending <strong>${last4}</strong> for member ${memberId}.</p>
+      <p>This action is irreversible once confirmed.</p>
+      <form action="/member/${memberId}/cards/${last4}/block" method="post">
+        <input type="hidden" name="csrf" value="${csrf}">
+        <button type="submit">${currentSkin().labels.confirm}</button>
+        <a href="/member/${memberId}/cards/${last4}">Back</a>
+      </form>
+    `),
+  );
+}
+
+export function cardReissueConfirm(memberId: string, last4: string, product: string, csrf: string): string {
+  return shell(
+    `Relay Credit Union — Confirm Card Reissue`,
+    chrome(`
+      <h1>Confirm Card Reissue</h1>
+      <p>Reissuing <strong>${product}</strong> ending <strong>${last4}</strong> for member ${memberId}.</p>
+      <p>This action is irreversible once confirmed.</p>
+      <form action="/member/${memberId}/cards/${last4}/reissue" method="post">
+        <input type="hidden" name="csrf" value="${csrf}">
+        <button type="submit">${currentSkin().labels.confirm}</button>
+        <a href="/member/${memberId}/cards/${last4}">Back</a>
+      </form>
+    `),
+  );
+}
+
+export function cardDone(memberId: string, last4: string, caseNumber: string): string {
+  return shell(
+    `Relay Credit Union — Card reissued`,
+    chrome(`
+      <h1>Card reissued</h1>
+      <p class="ok" role="status" aria-label="Confirmation">Confirmation: Card ${last4} blocked and reissued. Case ${caseNumber}.</p>
       <p><a href="/member/${memberId}">Return to Member</a></p>
     `),
   );

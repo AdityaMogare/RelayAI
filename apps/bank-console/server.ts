@@ -1,24 +1,39 @@
 import http from "node:http";
 import { URL } from "node:url";
-import type { Dispute } from "./data.ts";
+import type { Card, Dispute } from "./data.ts";
 import {
+  CARD_PAGE_SIZE,
   DISPUTE_PAGE_SIZE,
   SEARCH_PAGE_SIZE,
+  cloneCards,
   cloneDisputes,
+  listCards,
   listDisputes,
+  lookupCard,
   lookupDispute,
   lookupMember,
+  markCardBlocked,
+  markCardReissued,
   markDisputeFiled,
   paginate,
   productsForTier,
+  resetCards,
   resetDisputes,
   searchMembers,
   searchMembersByLastName,
 } from "./data.ts";
 import { DuplicateFilingError } from "../../src/core/errors.ts";
+import { CardActionsStore, DuplicateCardActionError } from "./card-actions.ts";
 import { FilingsStore } from "./filings.ts";
 import { FormTokenStore } from "./tokens.ts";
 import {
+  cardBlockConfirm,
+  cardBusinessPage,
+  cardDetailPage,
+  cardDone,
+  cardListPage,
+  cardNotFoundPage,
+  cardReissueConfirm,
   deniedPage,
   disputeDetailPage,
   disputeDone,
@@ -47,7 +62,19 @@ import {
   wrongScreenPage,
   adminWirePage,
 } from "./html.ts";
-import { framesetPage, navFrame, workMember, workMemberResults, workSearch } from "./legacy.ts";
+import {
+  framesetPage,
+  navFrame,
+  workCardBlock,
+  workCardBusiness,
+  workCardDetail,
+  workCardDone,
+  workCardList,
+  workCardReissue,
+  workMember,
+  workMemberResults,
+  workSearch,
+} from "./legacy.ts";
 import { RELAY_SKIN, skinById, type ConsoleSkin } from "./skins.ts";
 import {
   DEMO_TELLER,
@@ -63,6 +90,7 @@ import {
 } from "./session.ts";
 
 export { FilingsStore } from "./filings.ts";
+export { CardActionsStore } from "./card-actions.ts";
 
 export type ConsoleOptions = {
   skin?: ConsoleSkin;
@@ -77,6 +105,7 @@ export type ConsoleServer = {
   close: () => Promise<void>;
   filings: FilingsStore;
   tokens: FormTokenStore;
+  cardActions: CardActionsStore;
   skin: ConsoleSkin;
   reset: () => void;
 };
@@ -134,11 +163,22 @@ function disputeRows(memberId: string, rows: Dispute[]) {
   }));
 }
 
+function cardRows(memberId: string, rows: Card[]) {
+  return listCards(memberId, rows).map((c) => ({
+    last4: c.last4,
+    product: c.product,
+    status: c.status === "blocked" ? "Blocked" : "Active",
+    account: c.accountKind === "business" ? "Business" : "Personal",
+  }));
+}
+
 export function createConsoleServer(
   filings = new FilingsStore(),
   skinOrOpts: ConsoleSkin | ConsoleOptions = RELAY_SKIN,
   tokens = new FormTokenStore(),
   disputes = cloneDisputes(),
+  cards = cloneCards(),
+  cardActions = new CardActionsStore(),
 ): http.Server {
   const options: ConsoleOptions = isSkin(skinOrOpts) ? { skin: skinOrOpts } : skinOrOpts;
   const defaultSkin = options.skin ?? RELAY_SKIN;
@@ -159,6 +199,8 @@ export function createConsoleServer(
         filings,
         tokens,
         disputes,
+        cards,
+        cardActions,
         skin,
         getFlaky: () => flakyHits,
         setFlaky: (n) => {
@@ -180,6 +222,8 @@ type RequestCtx = {
   filings: FilingsStore;
   tokens: FormTokenStore;
   disputes: Dispute[];
+  cards: Card[];
+  cardActions: CardActionsStore;
   skin: ConsoleSkin;
   getFlaky: () => number;
   setFlaky: (n: number) => void;
@@ -199,6 +243,7 @@ function publicPath(pathname: string): boolean {
     pathname === "/frames" ||
     pathname.startsWith("/frames/") ||
     pathname === "/debug/filings" ||
+    pathname === "/debug/card-actions" ||
     pathname === "/debug/sql"
   );
 }
@@ -231,6 +276,10 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     if (url.pathname === "/debug/filings") {
       sendJson(res, 200, { filings: ctx.filings.all(), subAccounts: ctx.filings.subAccounts() });
+      return;
+    }
+    if (url.pathname === "/debug/card-actions") {
+      sendJson(res, 200, { cardActions: ctx.cardActions.all() });
       return;
     }
     if (url.pathname === "/debug/sql") {
@@ -668,6 +717,227 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
       return;
     }
 
+    const cardsListMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/?$/);
+    if (cardsListMatch) {
+      const memberId = cardsListMatch[1] ?? "";
+      const member = lookupMember(memberId);
+      if (!member) {
+        send(res, 200, notFoundPage(memberId));
+        return;
+      }
+      if (member.status === "restricted") {
+        send(res, 200, deniedPage(memberId));
+        return;
+      }
+      const all = cardRows(memberId, ctx.cards);
+      const page = paginate(all, Number(url.searchParams.get("page") ?? 1), CARD_PAGE_SIZE);
+      send(
+        res,
+        200,
+        legacyOn
+          ? workCardList(memberId, page.rows)
+          : cardListPage(memberId, page.rows, undefined, { page: page.page, pages: page.pages }),
+      );
+      return;
+    }
+
+    const cardsOpenMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/open$/);
+    if (cardsOpenMatch) {
+      const memberId = cardsOpenMatch[1] ?? "";
+      const member = lookupMember(memberId);
+      if (!member) {
+        send(res, 200, notFoundPage(memberId));
+        return;
+      }
+      if (member.status === "restricted") {
+        send(res, 200, deniedPage(memberId));
+        return;
+      }
+      const last4 = (url.searchParams.get("last4") ?? "").trim();
+      if (!last4) {
+        const html = legacyOn
+          ? workCardList(memberId, cardRows(memberId, ctx.cards), "Card last 4 is required.")
+          : cardListPage(memberId, cardRows(memberId, ctx.cards), "Card last 4 is required.");
+        send(res, 200, html);
+        return;
+      }
+      redirect(res, `/member/${memberId}/cards/${encodeURIComponent(last4)}`);
+      return;
+    }
+
+    const cardsBlockMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/([^/]+)\/block$/);
+    if (cardsBlockMatch) {
+      const memberId = cardsBlockMatch[1] ?? "";
+      const last4 = decodeURIComponent(cardsBlockMatch[2] ?? "");
+      const member = lookupMember(memberId);
+      if (!member) {
+        send(res, 200, notFoundPage(memberId));
+        return;
+      }
+      if (member.status === "restricted") {
+        send(res, 200, deniedPage(memberId));
+        return;
+      }
+      const card = lookupCard(memberId, last4, ctx.cards);
+      if (!card) {
+        send(res, 200, cardNotFoundPage(memberId, last4));
+        return;
+      }
+      if (req.method === "POST") {
+        const body = new URLSearchParams(await readBody(req));
+        if (!ctx.tokens.consume(body.get("csrf") ?? undefined, `block:${memberId}:${card.last4}`)) {
+          send(res, 400, invalidTokenPage());
+          return;
+        }
+        if (card.accountKind === "business") {
+          send(res, 200, legacyOn ? workCardBusiness(memberId, card.last4) : cardBusinessPage(memberId, card.last4));
+          return;
+        }
+        if (card.status === "blocked") {
+          send(res, 200, legacyOn ? workCardDetail(card) : cardDetailPage(card));
+          return;
+        }
+        markCardBlocked(memberId, card.last4, ctx.cards);
+        redirect(res, `/member/${memberId}/cards/${encodeURIComponent(card.last4)}/reissue`);
+        return;
+      }
+      if (req.method !== "GET") {
+        send(res, 405, methodNotAllowedPage(req.method ?? "GET", url.pathname));
+        return;
+      }
+      if (card.accountKind === "business") {
+        send(res, 200, legacyOn ? workCardBusiness(memberId, card.last4) : cardBusinessPage(memberId, card.last4));
+        return;
+      }
+      if (card.status === "blocked") {
+        send(res, 200, legacyOn ? workCardDetail(card) : cardDetailPage(card));
+        return;
+      }
+      const csrf = ctx.tokens.issue(`block:${memberId}:${card.last4}`);
+      send(
+        res,
+        200,
+        legacyOn
+          ? workCardBlock(memberId, card.last4, card.product, csrf)
+          : cardBlockConfirm(memberId, card.last4, card.product, csrf),
+      );
+      return;
+    }
+
+    const cardsReissueMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/([^/]+)\/reissue$/);
+    if (cardsReissueMatch) {
+      const memberId = cardsReissueMatch[1] ?? "";
+      const last4 = decodeURIComponent(cardsReissueMatch[2] ?? "");
+      const member = lookupMember(memberId);
+      if (!member) {
+        send(res, 200, notFoundPage(memberId));
+        return;
+      }
+      if (member.status === "restricted") {
+        send(res, 200, deniedPage(memberId));
+        return;
+      }
+      const card = lookupCard(memberId, last4, ctx.cards);
+      if (!card) {
+        send(res, 200, cardNotFoundPage(memberId, last4));
+        return;
+      }
+      if (req.method === "POST") {
+        const body = new URLSearchParams(await readBody(req));
+        if (!ctx.tokens.consume(body.get("csrf") ?? undefined, `reissue:${memberId}:${card.last4}`)) {
+          send(res, 400, invalidTokenPage());
+          return;
+        }
+        if (card.accountKind === "business") {
+          send(res, 200, legacyOn ? workCardBusiness(memberId, card.last4) : cardBusinessPage(memberId, card.last4));
+          return;
+        }
+        if (card.status !== "blocked" || !card.reissueReady) {
+          redirect(res, `/member/${memberId}/cards/${encodeURIComponent(card.last4)}/block`);
+          return;
+        }
+        let action;
+        try {
+          action = ctx.cardActions.insert({ member_id: memberId, last4: card.last4 });
+        } catch (err) {
+          if (err instanceof DuplicateCardActionError) {
+            const existing = ctx.cardActions.lookup(memberId, card.last4);
+            const caseNumber = existing?.case_number ?? card.caseNumber ?? "CASE-88001";
+            markCardReissued(memberId, card.last4, caseNumber, ctx.cards);
+            const updated = lookupCard(memberId, card.last4, ctx.cards)!;
+            send(res, 200, legacyOn ? workCardDetail(updated) : cardDetailPage(updated));
+            return;
+          }
+          throw err;
+        }
+        markCardReissued(memberId, card.last4, action.case_number, ctx.cards);
+        redirect(res, `/member/${memberId}/cards/${encodeURIComponent(card.last4)}/done`);
+        return;
+      }
+      if (req.method !== "GET") {
+        send(res, 405, methodNotAllowedPage(req.method ?? "GET", url.pathname));
+        return;
+      }
+      if (card.accountKind === "business") {
+        send(res, 200, legacyOn ? workCardBusiness(memberId, card.last4) : cardBusinessPage(memberId, card.last4));
+        return;
+      }
+      if (ctx.cardActions.has(memberId, card.last4) || card.caseNumber) {
+        send(res, 200, legacyOn ? workCardDetail(card) : cardDetailPage(card));
+        return;
+      }
+      if (card.status !== "blocked" || !card.reissueReady) {
+        redirect(res, `/member/${memberId}/cards/${encodeURIComponent(card.last4)}/block`);
+        return;
+      }
+      const csrf = ctx.tokens.issue(`reissue:${memberId}:${card.last4}`);
+      send(
+        res,
+        200,
+        legacyOn
+          ? workCardReissue(memberId, card.last4, card.product, csrf)
+          : cardReissueConfirm(memberId, card.last4, card.product, csrf),
+      );
+      return;
+    }
+
+    const cardsDoneMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/([^/]+)\/done$/);
+    if (cardsDoneMatch) {
+      const memberId = cardsDoneMatch[1] ?? "";
+      const last4 = decodeURIComponent(cardsDoneMatch[2] ?? "");
+      const stored = ctx.cardActions.lookup(memberId, last4);
+      const card = lookupCard(memberId, last4, ctx.cards);
+      const caseNumber = stored?.case_number ?? card?.caseNumber ?? "CASE-88001";
+      send(
+        res,
+        200,
+        legacyOn ? workCardDone(memberId, last4, caseNumber) : cardDone(memberId, last4, caseNumber),
+      );
+      return;
+    }
+
+    const cardsDetailMatch = url.pathname.match(/^\/member\/([^/]+)\/cards\/([^/]+)$/);
+    if (cardsDetailMatch) {
+      const memberId = cardsDetailMatch[1] ?? "";
+      const last4 = decodeURIComponent(cardsDetailMatch[2] ?? "");
+      const member = lookupMember(memberId);
+      if (!member) {
+        send(res, 200, notFoundPage(memberId));
+        return;
+      }
+      if (member.status === "restricted") {
+        send(res, 200, deniedPage(memberId));
+        return;
+      }
+      const card = lookupCard(memberId, last4, ctx.cards);
+      if (!card) {
+        send(res, 200, cardNotFoundPage(memberId, last4));
+        return;
+      }
+      send(res, 200, legacyOn ? workCardDetail(card) : cardDetailPage(card));
+      return;
+    }
+
     if (url.pathname === "/admin/wire" || url.pathname.startsWith("/admin/")) {
       send(res, 200, adminWirePage());
       return;
@@ -684,8 +954,10 @@ export async function startConsole(port = 0, options: ConsoleOptions = {}): Prom
   const filings = new FilingsStore();
   const tokens = new FormTokenStore();
   const disputes = cloneDisputes();
+  const cards = cloneCards();
+  const cardActions = new CardActionsStore();
   const skin = options.skin ?? skinById(process.env.RELAY_CONSOLE_SKIN);
-  const server = createConsoleServer(filings, { ...options, skin }, tokens, disputes);
+  const server = createConsoleServer(filings, { ...options, skin }, tokens, disputes, cards, cardActions);
   const host = listenHost();
   await new Promise<void>((resolve, reject) => {
     server.listen(port, host, () => resolve());
@@ -700,11 +972,14 @@ export async function startConsole(port = 0, options: ConsoleOptions = {}): Prom
     origin: `http://127.0.0.1:${address.port}`,
     filings,
     tokens,
+    cardActions,
     skin,
     reset: () => {
       filings.reset();
       tokens.reset();
       resetDisputes(disputes);
+      resetCards(cards);
+      cardActions.reset();
     },
     close: () =>
       new Promise((resolve, reject) => {
