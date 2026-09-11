@@ -21,7 +21,7 @@ npx playwright install chromium
 cp .env.example .env   # add ANTHROPIC_API_KEY (or OPENAI_API_KEY) for live discovery
 ```
 
-Node 20+. Discovery needs a model key. Replay, tests, and the evidence generator do not.
+Node 22+ required: the mock core uses the built-in `node:sqlite` driver (no new dependency). Discovery needs a model key. Replay, tests, and the evidence generator do not.
 
 ## Docker
 

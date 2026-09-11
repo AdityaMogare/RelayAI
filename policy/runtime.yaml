@@ -6,6 +6,7 @@ disabled:
   tenants: []
 
 blastRadius:
+  # 30/hr applies to every capability id, including ones not named here.
   maxInvocationsPerCapabilityPerHour: 30
   maxInvocationsPerTenantPerHour: 120
 

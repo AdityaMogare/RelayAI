@@ -11,8 +11,8 @@ Status: `accepted` | `superseded` | `proposed`
 - **Date:** 2026-09-09
 - **Status:** accepted
 - **Context:** The brief leaves language open. Artifact/result contracts are a graded focal point.
-- **Decision:** TypeScript on Node 20+, ESM, `tsx` for the CLI.
-- **Why:** Zod + Playwright + a typed JSON capability live in one language. Reviewers can read the schema as both types and runtime checks.
+- **Decision:** TypeScript on Node 22+, ESM, `tsx` for the CLI.
+- **Why:** Zod + Playwright + a typed JSON capability live in one language. Reviewers can read the schema as both types and runtime checks. Node 22 is required for the built-in `node:sqlite` driver used by the mock core.
 - **Rejected:** Python (weaker shared typing with the artifact), a multi-service split.
 
 ## D-002 — Target application
