@@ -38,8 +38,8 @@ const SCENARIOS: Record<string, string> = {
   "replay-needs-human-expired": "?expired=1 SESSION_EXPIRED",
   "replay-output-empty-amount": "DSP-1003 empty money cell",
   "replay-recoverable-exhausted": "?notice=always cap",
-  "replay-batch-reissue-40": "40 block+reissue invokes against CAMS batch",
-  "replay-batch-cap-exceeded": "31st invoke hits 30/hr blast-radius",
+  "replay-batch-reissue-40": "40 block+reissue invokes, cap lifted",
+  "replay-batch-cap-exceeded": "31st invoke hits 30/hr before navigation",
   "replay-batch-idempotency": "Second 4412 reissue; card_actions count = 1",
   "escalate-batch-business-account": "Card 3301 business account → supervisor",
 };
@@ -147,7 +147,7 @@ export function renderEvidenceIndex(root = resolve(process.cwd(), "evidence")): 
 </head>
 <body>
   <h1>RelayAI evidence</h1>
-  <p>Static catalog of committed runs. Open this file; no server required. Screenshots are gitignored (<code>evidence/**/*.png</code>) and appear when you generate evidence locally. GIFs are committed.</p>
+  <p>Static catalog of committed runs. Open this file; no server required. Failure and handoff stills cited in REPORT are committed; other PNGs stay local. GIFs are committed.</p>
   <table>
     <thead>
       <tr>

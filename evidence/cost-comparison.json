@@ -1,8 +1,9 @@
 {
-  "note": "Live discovery logs from these folders did not record token usage. Cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Durations are wall-clock from the committed traces.",
+  "lead": "Discovery cost $0.09 and 13 model calls, once. Every invocation since has cost $0.00 and called no model — 50 consecutive replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case.",
+  "note": "Discovery duration is discover.start → discover.end on the committed gpt-4o logs; a later discover.artifact hash-stamp is not part of the run. Tokens were not logged; cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Replay durations and the ×50 soak are live Chromium.",
   "table": [
-    "discovery      gpt-4o     38445.5s    13 model calls   $0.09",
-    "replay         none       4.3s     0 model calls   $0.00      9018.4× faster, 100% cheaper",
+    "discovery      gpt-4o     16.8s    13 model calls   $0.09",
+    "replay         none       4.3s     0 model calls   $0.00      $0.00 per invoke after recording",
     "replay ×50     none       76.3s     0 model calls   $0.00      50/50 success, 0% fallbacks"
   ],
   "rows": [
@@ -10,7 +11,7 @@
       "path": "discovery",
       "model": "gpt-4o",
       "scenario": "verify-and-file-dispute",
-      "durationMs": 38445456,
+      "durationMs": 16790,
       "modelCalls": 13,
       "estimatedCostUsd": 0.0871
     },
@@ -18,7 +19,7 @@
       "path": "discovery",
       "model": "gpt-4o",
       "scenario": "lookup-member-savings",
-      "durationMs": 39584170,
+      "durationMs": 8695,
       "modelCalls": 5,
       "estimatedCostUsd": 0.0335
     },

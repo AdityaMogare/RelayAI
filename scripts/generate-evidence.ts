@@ -7,6 +7,7 @@ import { promoteHits, rankedTarget } from "../src/artifact/ranked.ts";
 import { ControlPlane, humanCompletesRiskyStep, immediateResume } from "../src/escalation/control.ts";
 import { EvidenceStore } from "../src/evidence/store.ts";
 import { writeEvidenceIndex } from "../src/evidence/catalog.ts";
+import { countDiscovers, parseJsonl } from "../src/evidence/duration.ts";
 import type { Capability, Observation, RunResult } from "../src/core/types.ts";
 import { ReplayEngine } from "../src/replay/engine.ts";
 import { runStability } from "../src/replay/stability.ts";
@@ -161,22 +162,7 @@ function wireProbe(capability: Capability): Capability {
 function countDecides(runId: string): { model: string; calls: number; durationMs: number } {
   const logPath = resolve(ROOT, runId, "log.jsonl");
   if (!existsSync(logPath)) return { model: "unknown", calls: 0, durationMs: 0 };
-  let calls = 0;
-  let model = "unknown";
-  let first = 0;
-  let last = 0;
-  for (const line of readFileSync(logPath, "utf8").split("\n")) {
-    if (!line.trim()) continue;
-    const event = JSON.parse(line) as { at?: string; kind?: string; data?: { model?: string } };
-    const at = event.at ? Date.parse(event.at) : 0;
-    if (at && !first) first = at;
-    if (at) last = at;
-    if (event.kind === "discover.decide") {
-      calls += 1;
-      if (event.data?.model) model = event.data.model;
-    }
-  }
-  return { model, calls, durationMs: Math.max(0, last - first) };
+  return countDiscovers(parseJsonl(readFileSync(logPath, "utf8")));
 }
 
 function stitchGif(dir: string, frames: string[], outName: string): string | undefined {
@@ -788,7 +774,7 @@ try {
       status: "success",
       runs: 40,
       success: statuses.filter((s) => s === "success").length,
-      limiter: "uncapped — runtime.yaml 30/hr would stop this volume run",
+      limiter: "cap lifted for this volume measurement; see replay-batch-cap-exceeded for the 30/hr stop",
     });
     console.log("batch reissue 40", statuses.filter((s) => s === "success").length);
   });
@@ -882,10 +868,10 @@ try {
     costUsd(disputeDecides.model, disputeDecides.calls * EST_IN, disputeDecides.calls * EST_OUT).toFixed(4),
   );
   const replayMs = disputeReplay?.metrics?.durationMs ?? 0;
-  const speedup = replayMs > 0 ? (disputeDecides.durationMs / replayMs).toFixed(1) : "?";
   const stabilityMs = (stabilityReport?.durationsMs ?? []).reduce((a, b) => a + b, 0);
   const costTable = {
-    note: "Live discovery logs from these folders did not record token usage. Cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Durations are wall-clock from the committed traces.",
+    lead: "Discovery cost $0.09 and 13 model calls, once. Every invocation since has cost $0.00 and called no model — 50 consecutive replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case.",
+    note: "Discovery duration is discover.start → discover.end on the committed gpt-4o logs; a later discover.artifact hash-stamp is not part of the run. Tokens were not logged; cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Replay durations and the ×50 soak are live Chromium.",
     table: [
       formatMetrics("discovery", disputeDecides.model || "gpt-4o", {
         durationMs: disputeDecides.durationMs,
@@ -900,7 +886,7 @@ try {
         inputTokens: 0,
         outputTokens: 0,
         costUsd: 0,
-      }, `${speedup}× faster, 100% cheaper`),
+      }, "$0.00 per invoke after recording"),
       formatMetrics("replay ×50", "none", {
         durationMs: stabilityMs,
         modelCalls: 0,
@@ -989,7 +975,7 @@ Open \`index.html\` for the catalog (status, code, duration, locator ranks, trac
 | \`replay-ambiguous-row/\` | Last name Doe returns 14 rows; Open is scoped to \`:memberId\` so Jane (12345) is selected. |
 | \`policy-blocked-admin-wire/\` | Click **Wire Transfer**; Playwright route layer aborts \`GET /admin/wire\` (\`policy.blocked\` + \`POLICY_VIOLATION\`). |
 | \`stability-50/\` | N=50 lookup soak: success rate, fallback rate, p50/p95 duration. |
-| \`cost-comparison.json\` | Discovery vs replay cost/latency table. Tokens estimated when logs omit usage; durations are measured. |
+| \`cost-comparison.json\` | Discovery vs replay. Lead with cost and human time, not wall-clock speedup. Duration is \`discover.start\` → \`discover.end\`. |
 | \`escalate-open-sub-account/\` | Risky Confirm: pause, auto-resume. \`operatorKind: "scripted"\`. Sub-account Confirm is a real POST that inserts into \`sub_accounts\`. |
 | \`escalate-verify-and-file-dispute/\` | **HITL mechanism.** \`humanCompletesRiskyStep\` takes the lock and clicks Confirm on the live session. The record stamps \`operatorKind: "scripted"\` — timestamps in the hundreds of milliseconds are not a teller. \`filings-proof.json\` is a real \`node:sqlite\` count. |
 | \`escalate-verify-and-file-dispute-human/\` | Same scripted waiter plus a stitched \`handoff.gif\` of before/after frames. A genuine headed click is \`RELAY_HEADED=1 npm run escalate-demo -- --capability capabilities/verify-and-file-dispute.json\` with the operator console at :3847; that path stamps \`operatorKind: "human"\`. |
@@ -1000,8 +986,8 @@ Open \`index.html\` for the catalog (status, code, duration, locator ranks, trac
 | \`replay-needs-human-expired/\` | \`?expired=1\`: session expired. Status \`needs_human\` / \`SESSION_EXPIRED\` — ops ticket, not a locator bug. |
 | \`replay-output-empty-amount/\` | DSP-1003: dispute screen loads, amount cell empty (mainframe timeout). Checkpoints pass; typed money output fails \`OUTPUT_INVALID\`. |
 | \`replay-recoverable-exhausted/\` | \`?notice=always\`: interstitial returns every time. After the retry cap, \`needs_human\` / \`RECOVERABLE_EXHAUSTED\`. |
-| \`replay-batch-reissue-40/\` | 40 block+reissue invokes of \`capabilities/block-and-reissue-card.json\` (4412). Console reset between invokes. Uncapped — runtime.yaml 30/hr would stop this volume run. |
-| \`replay-batch-cap-exceeded/\` | 31st invoke against runtime.yaml 30/hr → \`failed\` / \`RATE_LIMIT\`. Console reset before #31 so uniqueness cannot explain a zero write. |
+| \`replay-batch-reissue-40/\` | 40 invocations for the volume measurement, with the cap lifted. Console reset between invokes. |
+| \`replay-batch-cap-exceeded/\` | Separately, the 31st invocation stopped at the configured 30/hour limit before navigation (\`RATE_LIMIT\`, \`stepId: "governance"\`, 5ms), with nothing written. |
 | \`replay-batch-idempotency/\` | Second 4412 reissue; \`card_actions\` SQLite count = 1. |
 | \`escalate-batch-business-account/\` | Card 3301: ControlPlane wired → \`escalated\` / \`SUPERVISOR_REQUIRED\`. Without a ControlPlane the same detector is \`needs_human\`. |
 

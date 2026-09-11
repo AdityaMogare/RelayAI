@@ -2,5 +2,5 @@
   "status": "success",
   "runs": 40,
   "success": 40,
-  "limiter": "uncapped — runtime.yaml 30/hr would stop this volume run"
+  "limiter": "cap lifted for this volume measurement; see replay-batch-cap-exceeded for the 30/hr stop"
 }

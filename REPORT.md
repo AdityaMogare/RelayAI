@@ -74,7 +74,7 @@ v1 replay flags drift; v2 is compiled against the new names; the step diff is in
 
 **D — Two models, one artifact.** Discovery is model-dependent; the artifact is not. `tests/equivalent.test.ts` and `/evidence/equivalent-models/` compile the same recording with `gpt-4o` and `claude-sonnet` provenance and get equivalent step sequences. Live dual-model is `discover --provider openai|anthropic`. This environment did not have both API keys, so those folders are compiler proof, not faked live traces.
 
-**E — Cost / latency.** Replay never calls the model. Measured table is `/evidence/cost-comparison.json` (discovery duration and call count from the committed gpt-4o logs; replay duration and the ×50 soak from live Chromium). Tokens on the historic discovery runs were not logged; cost is estimated from decide count × list prices and labeled as such.
+**E — Cost / latency.** Replay never calls the model. Discovery of verify-and-file-dispute cost an estimated $0.09 and 13 model calls, once. Every invocation since has cost $0.00 — 50 consecutive lookup replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case. Measured table: `/evidence/cost-comparison.json`. Duration is `discover.start` → `discover.end` on the committed logs; a later hash-stamp line is not part of the run. Tokens were not logged; cost is estimated from decide count × list prices and labeled as such.
 
 ## 3. Determinism & error handling
 
@@ -233,9 +233,9 @@ Credentials are references: `auth.credentialRef: "vault://tenant-9/teller"`. Rep
 
 Outputs carry `pii: true`. Evidence redacts those fields by name — not by guessing `$4,250.00` or “Jane Doe” with a regex. A money output stays a money object: `{ currency: "USD", minor: "[REDACTED]" }`. String PII is `[REDACTED-PII]`. Regex remains a backstop for SSNs, bearer tokens, and `ACCT-` strings, and **it misses names and money**. We also stopped dumping 2,000-character a11y snapshots into `log.jsonl`; persisted observations are URL, title, and control names.
 
-Committed traces live under `/evidence`. Open `evidence/index.html` for the catalog (scenario, status, code, duration, locator ranks, traces). Screenshots of member records do not belong in git forever (`evidence/**/*.png` is gitignored). GIFs are committed.
+Committed traces live under `/evidence`. Open `evidence/index.html` for the catalog (scenario, status, code, duration, locator ranks, traces). Failure and handoff stills the docs cite are committed; other PNGs stay local. GIFs are committed.
 
-Evidence TTL is **14 days**. `npm run evidence:purge` deletes expired run directories and old PNGs. Screenshots of member records do not belong in git forever (`evidence/**/*.png` is gitignored).
+Evidence TTL is **14 days**. `npm run evidence:purge` deletes expired run directories and old PNGs. Failure and handoff stills the docs cite stay in git; other PNGs stay local.
 
 Blast radius: 30 invocations per capability per tenant per hour, 120 per tenant per hour (`policy/runtime.yaml`). A bug that loops replay is an incident without that cap.
 

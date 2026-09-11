@@ -26,7 +26,7 @@ Open `index.html` for the catalog (status, code, duration, locator ranks, traces
 | `replay-ambiguous-row/` | Last name Doe returns 14 rows; Open is scoped to `:memberId` so Jane (12345) is selected. |
 | `policy-blocked-admin-wire/` | Click **Wire Transfer**; Playwright route layer aborts `GET /admin/wire` (`policy.blocked` + `POLICY_VIOLATION`). |
 | `stability-50/` | N=50 lookup soak: success rate, fallback rate, p50/p95 duration. |
-| `cost-comparison.json` | Discovery vs replay cost/latency table. Tokens estimated when logs omit usage; durations are measured. |
+| `cost-comparison.json` | Discovery vs replay. Lead with cost and human time, not wall-clock speedup. Duration is `discover.start` → `discover.end`. |
 | `escalate-open-sub-account/` | Risky Confirm: pause, auto-resume. `operatorKind: "scripted"`. Sub-account Confirm is a real POST that inserts into `sub_accounts`. |
 | `escalate-verify-and-file-dispute/` | **HITL mechanism.** `humanCompletesRiskyStep` takes the lock and clicks Confirm on the live session. The record stamps `operatorKind: "scripted"` — timestamps in the hundreds of milliseconds are not a teller. `filings-proof.json` is a real `node:sqlite` count. |
 | `escalate-verify-and-file-dispute-human/` | Same scripted waiter plus a stitched `handoff.gif` of before/after frames. A genuine headed click is `RELAY_HEADED=1 npm run escalate-demo -- --capability capabilities/verify-and-file-dispute.json` with the operator console at :3847; that path stamps `operatorKind: "human"`. |
@@ -37,8 +37,8 @@ Open `index.html` for the catalog (status, code, duration, locator ranks, traces
 | `replay-needs-human-expired/` | `?expired=1`: session expired. Status `needs_human` / `SESSION_EXPIRED` — ops ticket, not a locator bug. |
 | `replay-output-empty-amount/` | DSP-1003: dispute screen loads, amount cell empty (mainframe timeout). Checkpoints pass; typed money output fails `OUTPUT_INVALID`. |
 | `replay-recoverable-exhausted/` | `?notice=always`: interstitial returns every time. After the retry cap, `needs_human` / `RECOVERABLE_EXHAUSTED`. |
-| `replay-batch-reissue-40/` | 40 block+reissue invokes of `capabilities/block-and-reissue-card.json` (4412). Console reset between invokes. Uncapped — runtime.yaml 30/hr would stop this volume run. |
-| `replay-batch-cap-exceeded/` | 31st invoke against runtime.yaml 30/hr → `failed` / `RATE_LIMIT`. Console reset before #31 so uniqueness cannot explain a zero write. |
+| `replay-batch-reissue-40/` | 40 invocations for the volume measurement, with the cap lifted. Console reset between invokes. |
+| `replay-batch-cap-exceeded/` | Separately, the 31st invocation stopped at the configured 30/hour limit before navigation (`RATE_LIMIT`, `stepId: "governance"`, 5ms), with nothing written. |
 | `replay-batch-idempotency/` | Second 4412 reissue; `card_actions` SQLite count = 1. |
 | `escalate-batch-business-account/` | Card 3301: ControlPlane wired → `escalated` / `SUPERVISOR_REQUIRED`. Without a ControlPlane the same detector is `needs_human`. |
 

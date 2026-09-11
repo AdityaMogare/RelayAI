@@ -18,7 +18,7 @@
 </head>
 <body>
   <h1>RelayAI evidence</h1>
-  <p>Static catalog of committed runs. Open this file; no server required. Screenshots are gitignored (<code>evidence/**/*.png</code>) and appear when you generate evidence locally. GIFs are committed.</p>
+  <p>Static catalog of committed runs. Open this file; no server required. Failure and handoff stills cited in REPORT are committed; other PNGs stay local. GIFs are committed.</p>
   <table>
     <thead>
       <tr>
@@ -158,7 +158,7 @@
       </tr>
 <tr>
         <td><code>replay-batch-cap-exceeded/</code></td>
-        <td>31st invoke hits 30/hr blast-radius</td>
+        <td>31st invoke hits 30/hr before navigation</td>
         <td><strong>failed</strong></td>
         <td><code>RATE_LIMIT</code></td>
         <td>5 ms</td>
@@ -178,7 +178,7 @@
       </tr>
 <tr>
         <td><code>replay-batch-reissue-40/</code></td>
-        <td>40 block+reissue invokes against CAMS batch</td>
+        <td>40 block+reissue invokes, cap lifted</td>
         <td><strong>success</strong></td>
         <td><code>—</code></td>
         <td>—</td>
@@ -349,10 +349,11 @@
     </tbody>
   </table>
   <h2>Discovery vs replay cost</h2><pre>{
-  &quot;note&quot;: &quot;Live discovery logs from these folders did not record token usage. Cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Durations are wall-clock from the committed traces.&quot;,
+  &quot;lead&quot;: &quot;Discovery cost $0.09 and 13 model calls, once. Every invocation since has cost $0.00 and called no model — 50 consecutive replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case.&quot;,
+  &quot;note&quot;: &quot;Discovery duration is discover.start → discover.end on the committed gpt-4o logs; a later discover.artifact hash-stamp is not part of the run. Tokens were not logged; cost is estimated as modelCalls × ~1800 input + ~220 output tokens at gpt-4o list prices ($2.50 / $10 per 1M). Replay is $0. Replay durations and the ×50 soak are live Chromium.&quot;,
   &quot;table&quot;: [
-    &quot;discovery      gpt-4o     38445.5s    13 model calls   $0.09&quot;,
-    &quot;replay         none       4.3s     0 model calls   $0.00      9018.4× faster, 100% cheaper&quot;,
+    &quot;discovery      gpt-4o     16.8s    13 model calls   $0.09&quot;,
+    &quot;replay         none       4.3s     0 model calls   $0.00      $0.00 per invoke after recording&quot;,
     &quot;replay ×50     none       76.3s     0 model calls   $0.00      50/50 success, 0% fallbacks&quot;
   ],
   &quot;rows&quot;: [
@@ -360,7 +361,7 @@
       &quot;path&quot;: &quot;discovery&quot;,
       &quot;model&quot;: &quot;gpt-4o&quot;,
       &quot;scenario&quot;: &quot;verify-and-file-dispute&quot;,
-      &quot;durationMs&quot;: 38445456,
+      &quot;durationMs&quot;: 16790,
       &quot;modelCalls&quot;: 13,
       &quot;estimatedCostUsd&quot;: 0.0871
     },
@@ -368,7 +369,7 @@
       &quot;path&quot;: &quot;discovery&quot;,
       &quot;model&quot;: &quot;gpt-4o&quot;,
       &quot;scenario&quot;: &quot;lookup-member-savings&quot;,
-      &quot;durationMs&quot;: 39584170,
+      &quot;durationMs&quot;: 8695,
       &quot;modelCalls&quot;: 5,
       &quot;estimatedCostUsd&quot;: 0.0335
     },
