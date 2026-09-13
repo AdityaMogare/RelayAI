@@ -2,282 +2,347 @@
 
 [![CI](https://github.com/AdityaMogare/RelayAI/actions/workflows/ci.yml/badge.svg)](https://github.com/AdityaMogare/RelayAI/actions/workflows/ci.yml)
 
-A computer-use system for the long tail of bank back-office apps that have no API: an LLM discovers a flow once, the run is compiled into a typed capability, and production invokes that capability by deterministic replay — no model in the loop.
+Banks run a lot of old software that has no API. The only way in is the screen a
+staff member uses. RelayAI gives an AI agent hands for those systems.
+
+It works in two halves. An LLM drives the real screens **once** and figures out
+how to do the job. What it learned is saved as a file, and from then on that file
+does the job **with no LLM involved at all**.
+
+The second half is the point. Running a model on every transaction is slow, costs
+money each time, and can do something slightly different twice in a row. None of
+that is acceptable inside a bank.
+
+---
+
+## Run it first, read second
 
 ```bash
-npm ci && npm run verify    # 27 rows, no API key, ~40s
+npm ci && npm run verify        # 27 scenarios, no API key, ~40 seconds
 ```
 
-Discovery cost $0.09 and 13 model calls, once. Every invocation since has cost $0.00 and called no model — 50 consecutive replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case.
+That runs the whole system against a local fake bank and prints a pass/fail
+table. If it's green on your machine, everything below this line is true on your
+machine.
 
-This is a take-home vertical slice, not a product. It automates a local credit-union servicing console. The default skin is the modern recorded chrome (so the three golden capabilities stay green). `?legacy=1` is a real frameset with sibling-cell balances and rotating ASP.NET ids; `?tenant=westside` is a third skin on the same process. Auth (`startConsole(0, { auth: true })`) is `/login` + a 90s session cookie.
+```
+discovery   gpt-4o   16.8s   13 model calls   $0.09
+replay      none      4.3s    0 model calls   $0.00   $0.00 per invoke after recording
+replay ×50  none     76.3s    0 model calls   $0.00   50/50 success, 0% fallbacks
+```
 
-## What it does
+Discovery happened once. Every run since has been free. A servicing rep doing
+this by hand is about six minutes a case.
 
-1. **Discover** — observe → decide → act against a live UI until the goal is met. `--id X` writes `capabilities/X.json`.
-2. **Compile** — write a versioned, parameterized capability (not a model transcript), with per-step checkpoints and ranked locators.
-3. **Replay** — `replay --capability capabilities/X.json`; classify success, business outcomes, invalid input, recoverable interstitials, `needs_human`, and hard failures. Money outputs are `{ currency, minor }`. Both traces log the artifact content hash.
-4. **Escalate** — pause the *same* live session, capture what the human did, resume; replay re-observes and skips the risky step if the checkpoint already holds.
+---
+
+## The whole system on one screen
+
+```
+   "file the ACME dispute for Jane Doe"          invoke(id, {memberId, merchant,
+                    │                                        last4, reason})
+                    ▼                                          ▼
+ ┌──────────────────────────────┐            ┌──────────────────────────────┐
+ │  DISCOVERY                   │            │  REPLAY                      │
+ │  once · 17s · $0.09 · 13 LLM │            │  always · 4s · $0.00 · 0 LLM │
+ │                              │            │                              │
+ │   observe ─▶ decide ─▶ act   │            │   govern ─▶ validate ─▶      │
+ │      ▲                  │    │            │   idempotency ─▶ overlay ─▶  │
+ │      └──────────────────┘    │            │   precondition ─▶ STEP LOOP  │
+ │            │ compile()       │            │                              │
+ └────────────┼─────────────────┘            └────┬──────────────┬──────────┘
+              ▼                                   │              │ risky
+   ╔══════════════════════════╗                   │              │ or stuck
+   ║  capabilities/X.json     ║ ─────────────────▶│              ▼
+   ║  sha256: e072c3dd45b4…   ║   load + verify   │       ┌──────────────┐
+   ║                          ║      same hash    │       │ ControlPlane │
+   ║  THE SEAM — the only     ║                   │       └──────┬───────┘
+   ║  thing that crosses      ║                   │              │ pause the
+   ╚═══╦══════════════════╦═══╝                   │              │ SAME session
+       ▲                  ▲                       │              ▼
+       │                  │                       │       ┌──────────────┐
+   review +         overlays/tenants/*.yaml       │       │ Operator     │─▶ 👤
+   approve          rename controls, add          │       │  :3847       │◀─
+   (2 people)       screens — CANNOT              │       └──────────────┘
+                    change risk                   ▼
+                                          ┌──────────────────────┐
+                                          │  RunResult — 7 kinds │
+                                          └──────────┬───────────┘
+                       ┌─────────────────────────────┼────────────────┐
+                       ▼                             ▼                ▼
+                runs/ledger.jsonl            evidence/<run>/      drift score
+                idempotency + audit          log, png, result     → rediscover
+
+
+   Both paths reach the app the same way:
+
+        DISCOVERY ─┐
+                   ├─▶  Surface port  ─▶  Policy  ─▶  [ Legacy bank UI ]
+        REPLAY ────┘    observe/act       route allowlist    frameset, no test IDs,
+                        web|desktop|mock   DEFAULT DENY       3 tenant skins
+```
+
+Everything left of the double bar happens once. Everything right of it happens in
+production. The JSON file is the only thing that crosses.
+
+---
+
+## What's in the box
+
+There's no real bank to test against, so the repo ships a small fake one you run
+on your laptop. It's deliberately awkward in the ways real bank software is:
+
+- no automation-friendly IDs on anything
+- element IDs that change on every page load (`ctl00_ctl32_dgAcct_ctl04_lblVal`)
+- an old frameset layout (`?legacy=1`)
+- a login that times out after 90 seconds
+- three visual skins of the same product, like three institutions running the
+  same vendor software
+
+Four saved capabilities run against it:
+
+| Capability | Does | Blast radius |
+|---|---|---|
+| `lookup-member-savings` | Reads a balance | none |
+| `open-sub-account` | Opens an account | irreversible |
+| `verify-and-file-dispute` | Finds a charge, checks the amount, files it | irreversible |
+| `block-and-reissue-card` | Blocks a card, orders a replacement | irreversible |
+
+---
 
 ## Setup
 
 ```bash
 npm install
 npx playwright install chromium
-cp .env.example .env   # add ANTHROPIC_API_KEY (or OPENAI_API_KEY) for live discovery
+cp .env.example .env     # OPENAI_API_KEY or ANTHROPIC_API_KEY, for discovery only
 ```
 
-Node 22+ required: the mock core uses the built-in `node:sqlite` driver (no new dependency). Discovery needs a model key. Replay, tests, and the evidence generator do not.
+Node 22 or newer. The fake bank stores data with `node:sqlite`, built into
+Node 22, so there's no database to install. Replay, the tests and `npm run verify`
+need no API key. A `Dockerfile` is there if you want the console in a container
+(`npm run docker:smoke`).
 
-## Docker
+---
 
-Teammates can try the console, tests, and replay without a local Node/Playwright install. Chromium is in the image. Headed browser windows are not available — discovery and escalation run headless (use `RELAY_AUTO_RESUME_MS` for the confirm handoff).
+## The main demo
+
+**Terminal 1 — start the fake bank:**
 
 ```bash
-docker compose up --build
-# Credit-union console: http://localhost:3000
+npm run console          # http://127.0.0.1:3000
 ```
 
-If host port 3000 is already taken, change the left-hand side in `docker-compose.yml` (`"3001:3000"`).
+**Terminal 2 — let the model work out a job (about 9 cents):**
 
 ```bash
-# Tests + lookup/dispute replay in one shot
-docker compose --profile smoke run --rm smoke
-```
-
-With the console already up:
-
-```bash
-docker compose exec console npm test
-docker compose exec console npm run replay -- --capability capabilities/lookup-member-savings.json --input memberId=12345
-docker compose exec console npm run replay -- --capability capabilities/lookup-member-savings.json --input memberId=99999
-docker compose exec console npm run replay -- --capability capabilities/verify-and-file-dispute.json \
-  --input memberId=12345 --input merchant="ACME POS" --input last4=4412 --input reason=Unauthorized \
-  --approve-risky
-```
-
-Optional discovery — Compose reads `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` from a local `.env`. Playwright inside the container uses `http://127.0.0.1:3000`; browse `http://localhost:3000` on the host.
-
-```bash
-docker compose exec console npm run discover -- \
-  --goal "Look up member 12345 and read their current savings balance" \
-  --target http://127.0.0.1:3000 \
-  --id lookup-member-savings
-# add --scripted if you have no model key
-```
-
-## Demo path
-
-Terminal 1 — start the stand-in core:
-
-```bash
-npm run console
-# Relay Credit Union console: http://127.0.0.1:3000
-```
-
-Terminal 2 — discover a **real servicing scenario** (live model). The goal names a person, a merchant, and a last-4 — not a DSP- id. The agent must search the queue for the ACME POS row:
-
-```bash
-RELAY_AUTO_RESUME_MS=1500 npm run discover -- \
-  --goal 'Jane Doe called about an unauthorized charge from ACME POS on her card ending 4412. Find that transaction, verify the amount, and file it as Unauthorized.' \
+npm run discover -- \
+  --goal 'Jane Doe (member 12345) reported an unauthorized charge from ACME POS on
+          her card ending 4412. Find that transaction, verify the amount, and file
+          it as Unauthorized.' \
   --target http://127.0.0.1:3000 \
   --id verify-and-file-dispute \
-  --max-steps 20 \
   --headed
 ```
 
-Short lookup path (also a live-model run in `/evidence`):
+Notice the goal doesn't contain a dispute ID. The agent has to search the queue
+and pick the right row — which is why the saved recording has a step called
+`s04-open-row` and takes `merchant` and `last4` as inputs.
+
+No API key? Same loop, scripted instead of a model:
 
 ```bash
-npm run discover -- \
-  --goal "Look up member 12345 and read their current savings balance" \
-  --target http://127.0.0.1:3000 \
-  --id lookup-member-savings \
-  --headed
-# writes capabilities/lookup-member-savings.json (hash logged on discover.end)
+npm run discover -- --goal "Look up member 12345 and read their savings balance" \
+  --target http://127.0.0.1:3000 --id lookup-member-savings --scripted
 ```
 
-Without a model key, the same loop runs offline with a scripted policy:
+**Now replay it. No model, four seconds:**
 
 ```bash
-npm run discover -- \
-  --goal "Look up member 12345 and read their current savings balance" \
-  --target http://127.0.0.1:3000 \
-  --id lookup-member-savings \
-  --scripted
+npm run replay -- --capability capabilities/verify-and-file-dispute.json \
+  --input memberId=12345 --input merchant="ACME POS" --input last4=4412 \
+  --input reason=Unauthorized --approve-risky
 ```
 
-Replay — no LLM. Same file discover wrote (`contentHash` is in both traces):
+Same file, different inputs, and the answers you don't want:
 
 ```bash
-npm run replay -- --capability capabilities/lookup-member-savings.json --input memberId=12345
+# "no such member" — a real answer, returned cleanly, not a crash
 npm run replay -- --capability capabilities/lookup-member-savings.json --input memberId=99999
+
+# see what it would do without doing the irreversible part
 npm run replay -- --capability capabilities/verify-and-file-dispute.json \
-  --input memberId=12345 --input merchant="ACME POS" --input last4=4412 --input reason=Unauthorized \
-  --dry-run
-# stops before Confirm; returns transactionAmount and wouldExecute
-npm run replay -- --capability capabilities/verify-and-file-dispute.json \
-  --input memberId=12345 --input merchant="ACME POS" --input last4=4412 --input reason=Unauthorized \
-  --approve-risky
-npm run replay -- --capability capabilities/verify-and-file-dispute.json \
-  --input memberId=12345 --input merchant=NO-SUCH --input last4=0000 --input reason=Unauthorized
+  --input memberId=12345 --input merchant="ACME POS" --input last4=4412 \
+  --input reason=Unauthorized --dry-run
 ```
 
-`memberId=99999` is a **business outcome** (`MEMBER_NOT_FOUND`), not a crash. `merchant=NO-SUCH` is `DISPUTE_NOT_FOUND`.
+---
 
-The closed loop — replay on a drifted tenant, re-discover, replay green:
+## The human handoff
+
+Some steps shouldn't happen without a person.
 
 ```bash
-npm run replay -- --capability capabilities/verify-and-file-dispute.json \
-  --input memberId="Jane Doe" --input merchant="ACME POS" --input last4=4412 --input reason=Unauthorized \
-  --tenant westside-drift --approve-risky
-# rank-3 text fallbacks → needsRediscovery (exit 1)
-npm run rediscover -- --capability capabilities/verify-and-file-dispute.json --tenant westside-drift --scripted
-# compiles v2 against westside names, diffs v1→v2, replays green
+npm run escalate-demo    # operator page at http://127.0.0.1:3847
 ```
 
-Same goal, two models (needs API keys). The compiler is what makes the artifacts equivalent, not the model:
+That pauses `open-sub-account` on Confirm. Pass
+`--capability capabilities/verify-and-file-dispute.json` to pause a filing
+instead.
 
-```bash
-npm run discover -- --provider openai --model gpt-4o --goal '...' --target http://127.0.0.1:3000 --id verify-and-file-dispute
-npm run discover -- --provider anthropic --model claude-sonnet-4-20250514 --goal '...' --target http://127.0.0.1:3000 --id verify-and-file-dispute-claude
+What you'll see:
+
+```
+  1. browser stops on the confirm screen, red banner with the session ID
+  2. operator page shows why it stopped, plus a screenshot
+  3. you claim it as teller01
+  4. you click Confirm yourself IN THAT SAME WINDOW
+  5. you hand back saying "I already did it"
+  6. automation re-observes, sees the work is done, DOES NOT CLICK
 ```
 
-Human handoff on a risky confirm (headed browser + operator page at `http://127.0.0.1:3847`). Claim as `teller01`, do the work on the live window, then return `completed_by_human` / `not_done` / `abort`. Unattended, `RELAY_INTERVENTION_TTL_MS` (default 120s) abandons and releases the teller session:
+If it was a dispute, `SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'`
+is then 1. That skip path is recorded in
+`evidence/escalate-verify-and-file-dispute/` (`operatorKind: "scripted"`).
 
-```bash
-npm run escalate-demo
-# or, for a non-interactive capture:
-RELAY_AUTO_RESUME_MS=8000 npm run escalate-demo -- --auto-resume-ms 8000
+If nobody turns up within two minutes the run is abandoned and the button is
+**not** pressed. `evidence/escalate-human-handoff/` is a real person claiming as
+teller01 and then the wait running out (`operatorKind: "human"`). Confirm was
+not pressed.
+
+Discovery can stop for a person too. If the model hits a screen it doesn't know,
+a teller clicks through on the same session and the file stamps `assistedBy`.
+`evidence/discovery-assisted-attest/` is that.
+
+---
+
+## One recording, several institutions
+
+The lookup capability was recorded once against Demo CU. CU West runs the same
+vendor product with different wording. That's one line of YAML, not a new
+recording:
+
+```yaml
+# overlays/tenants/tenant-14.yaml
+copy:
+  Search: Find Member
+  Member Lookup: Find a Member
+  Confirm: Submit Request
 ```
 
-The reviewable HITL artifacts are `/evidence/escalate-verify-and-file-dispute` (`operatorKind: "scripted"`, sqlite filings count = 1) and `/evidence/escalate-human-handoff` (headed operator-console claim, `operatorKind: "human"`). Open `evidence/index.html` for the full catalog.
-
-Agent-facing catalog:
-
 ```bash
-npm run capabilities -- tools --id lookup-member-savings
-npm run capabilities -- list
-npm run capabilities -- invoke --id lookup-member-savings --input memberId=12345
-```
-
-Replay stability (stretch M10):
-
-```bash
-npm run stability -- --capability capabilities/lookup-member-savings.json --input memberId=12345 --runs 5
-```
-
-## Multi-tenant (one artifact, two skins)
-
-The lookup capability was recorded once against Demo CU (tenant-9). CU West (tenant-14) is the same Relay Core product with different chrome and labels (`Search` → `Find Member`, `Confirm` → `Submit Request`). The overlay is YAML a non-engineer can edit:
-
-```bash
-npm run overlay -- --capability capabilities/open-sub-account.json --tenant tenant-14
-npm run probe -- --capability capabilities/lookup-member-savings.json --tenant tenant-14 --input memberId=12345
+npm run overlay     -- --capability capabilities/open-sub-account.json --tenant tenant-14
+npm run probe       -- --capability capabilities/lookup-member-savings.json --tenant tenant-14 --input memberId=12345
 npm run portability -- --capability capabilities/lookup-member-savings.json --input memberId=12345
-npm run replay -- --capability capabilities/lookup-member-savings.json --input memberId=12345 --tenant westside --probe
-npm run rediscover -- --capability capabilities/lookup-member-savings.json --tenant westside-drift --scripted
-npm run drift -- --tenant tenant-9
-npm run desktop-replay
+npm run drift       -- --tenant tenant-9
+npm run rediscover  -- --capability capabilities/verify-and-file-dispute.json --scripted
+npm run desktop-replay      # same capability, a non-browser surface
 ```
 
-`overlays/tenants/tenant-14.yaml` is the smallest change for a renamed Confirm. Resolution is base artifact → vendor pack → tenant overlay → run params; overlays cannot change `risk`.
+Overlays can rename controls and add error screens. They **cannot** change which
+steps are dangerous — that's re-checked after the rename, because the whole point
+of "Confirm" becoming "Submit Request" is that it's still the dangerous button.
+When a tenant has drifted too far, `npm run rediscover` records a v2 against that
+skin. Replay still never calls a model.
 
-Safety (M6):
+---
+
+## Volume, and the brakes
 
 ```bash
-npm run review
-npm run approve -- --capability open-sub-account --requested-by analyst@relay --approved-by risk@relay
-npm run audit -- --member 12345 --from 2026-09-08 --to 2026-09-09
-npm run kill -- --capability open-sub-account   # no deploy; edits policy/runtime.yaml
-npm run evidence:purge                          # TTL 14 days
+npm run capabilities -- invoke --id block-and-reissue-card --input memberId=12345 --input last4=4412
+npm run stability    -- --capability capabilities/lookup-member-savings.json --input memberId=12345 --runs 50
 ```
 
-## Seeded console states
+There's a cap of 30 runs per capability per hour and 120 per tenant.
+`evidence/replay-batch-cap-exceeded/` shows the 31st run being stopped in 5
+milliseconds, before the browser even opens, with nothing written.
 
-| Member / ID | What happens |
+---
+
+## Safety controls
+
+```bash
+npm run review      # fails if a Confirm step is marked safe
+npm run approve -- --capability open-sub-account --requested-by analyst@relay --approved-by risk@relay
+npm run kill    -- --capability open-sub-account     # off switch, no deploy
+npm run audit   -- --member 12345 --from 2026-09-08 --to 2026-09-09
+npm run evidence:purge                                # 14-day retention
+```
+
+The browser physically blocks any request to a page that isn't allowed, so the
+agent cannot reach `/admin/wire` even by accident. Passwords are references to a
+vault, never written into a file. Customer values are marked sensitive and
+stripped from logs by name, not by a regex hoping to spot a dollar amount.
+
+---
+
+## The fake bank's test cases
+
+| Input | What happens |
 |---|---|
-| `12345` | Jane Doe — savings `$4,250.00` |
-| `last=Doe` | 14 Doe rows (Jane is not first); Open is disambiguated by Member ID |
-| `67890` | John Smith — no disputes |
+| `12345` | Jane Doe, savings `$4,250.00` |
+| `67890` | John Smith |
 | `55555` | Permission denied |
 | `99999` | Member not found |
-| `DSP-1001` | Open dispute on Jane Doe — `$42.18` ACME POS |
-| `DSP-1002` | Already filed — `DISPUTE_ALREADY_FILED` |
-| `DSP-1003` | Dispute screen loads; amount cell empty (mainframe timeout) → `OUTPUT_INVALID` |
-| `DSP-9999` | Dispute not found |
-| `?notice=1` | System Notice dialog (recoverable: dismiss, retry same step) |
-| `?notice=always` | Interstitial returns every time → `RECOVERABLE_EXHAUSTED` / `needs_human` |
-| `?expired=1` | Session expired (`needs_human`, not a locator ticket) |
-| `?expireMid=1` | Search succeeds, then session expires; Sign In resumes to the pending member |
-| `/legacy` | Hostile `<frameset>` skin (banner / nav / work) |
-| `Wire Transfer` | Chrome link to `/admin/wire` — allowlist aborts the request |
-| `?wrong=1` | Anti-checkpoint: Wrong screen |
-| `?flaky=1` | First two hits HTTP 503 (transient backoff), then serves the page |
-| `?slow=1` | Artificial slowness |
+| `DSP-1001` | Open dispute, `$42.18` ACME POS |
+| `DSP-1002` | Already filed (filing DSP-1001 twice also lands here) |
+| `DSP-1003` | Page looks fine, amount cell is blank (the interesting one) |
+| `4412 / 7788 / 3301` | Normal card / already blocked / business account, supervisor needed |
+| `?notice=1` | Popup you can dismiss |
+| `?notice=always` | Popup that never goes away |
+| `?expired=1` | Session died |
+| `?expireMid=1` | Session dies after Search; a person can sign back in |
+| `?flaky=1` | Two 503s, then works |
+| `?legacy=1` | Frameset, no labels, changing IDs |
+| `?tenant=westside` | A third institution's wording |
 
-Open a sub-account from a member record, or file a card dispute; **Confirm** is treated as irreversible.
+---
 
-## Tests (offline except Playwright)
-
-Reviewer command — no model key, no browser. Green table covering every scenario, plus the hash through-line. Pass `--json` for an agent-parseable object (every command accepts it):
+## Tests
 
 ```bash
-npm run verify
-npm run -s verify -- --json
+npm test            # 190 tests, 28 files
+npm run verify      # the 27-scenario table
+npm run evidence    # regenerate every recorded run (real browser, slow)
 ```
 
-The round-trip row is the proof that `discover.end contentHash` equals `replay.start contentHash`. A CSS fallback on an otherwise-successful run is a FAIL on `locator fallback flags drift` (needs re-discovery, confidence < 1). Dry-run stops before Confirm and still returns the transaction amount.
+CI runs typecheck, tests and verify on every push. No API key needed.
 
-```bash
-npm test
-```
+---
 
-GitHub Actions runs `npm run typecheck`, `npm test`, and `npm run verify` on every push. Clone, `npm ci`, `npm test`, `npm run verify` — green in under five minutes, no API key except for live discovery.
-
-Unit tests use a fake surface and a scripted LLM. Integration tests drive Chromium against a fresh in-process console. Nothing calls a model API.
-
-Regenerate replay and escalation traces in `/evidence` (live browser, no LLM). The committed discovery transcript is a live-model run and is not overwritten:
-
-```bash
-npm run evidence
-```
-
-## Layout
+## Where things live
 
 ```
-apps/bank-console/   local credit-union console
-src/core/            Surface + LLM ports
-src/surfaces/        Playwright web adapter, mock adapter, desktop a11y-tree adapter
-src/artifact/        Zod schema, compiler, store
-src/replay/          deterministic executor + result taxonomy
-src/policy/          allowlist + redaction
-src/escalation/      control lock + operator page
-src/agent/           discovery loop
-capabilities/        versioned JSON capabilities (the contract)
-overlays/            vendor packs + tenant copy remaps (diffable YAML)
-runs/                append-only run ledger (operational; not reviewed like code)
-evidence/            discovery + replay + escalation traces
-policy/allowlist.yaml
-policy/runtime.yaml    kill switch, blast-radius, 14-day evidence TTL
-Dockerfile           Playwright image for team try-out
-docker-compose.yml   console + smoke profile
-REPORT.md            design write-up
+apps/bank-console/   the fake bank (3 skins, legacy mode, login, sqlite)
+src/core/            the two swappable interfaces: Surface and LLM
+src/surfaces/        Playwright adapter, desktop adapter, fake adapter for tests
+src/agent/           the discovery loop
+src/artifact/        the recording format, compiler, hashing, migration
+src/replay/          the no-model executor and the error classification
+src/escalation/      the human handoff
+src/policy/          allowed routes, risky actions, secrets, redaction
+src/overlay/         per-institution differences
+src/evidence/        run folders, catalog, 14-day retention
+overlays/            per-institution YAML
+policy/              allowlist and rate-limit levers
+capabilities/        4 saved recordings
+evidence/            32 recorded runs — start with evidence/index.html
+tests/               190 tests
+scripts/             evidence generator, docker smoke
+REPORT.md            how it's built and why
+DECISIONS.md         what I chose, what it cost
 ```
 
-## Configuration
+## Settings
 
-| Variable | Purpose |
+| Variable | What it does |
 |---|---|
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Live discovery |
-| `RELAY_LLM_PROVIDER` | `anthropic` (if `ANTHROPIC_API_KEY` is set) or `openai` |
-| `RELAY_MODEL` | Override model id |
+| `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` | Live discovery only |
+| `RELAY_LLM_PROVIDER` / `RELAY_MODEL` | Which model discovers (Anthropic if that key is set, else OpenAI `gpt-4o`) |
 | `RELAY_HEADED=1` | Show the browser |
-| `RELAY_CONSOLE_PORT` | Console bind (default 3000) |
+| `RELAY_CONSOLE_PORT` | Fake bank port (default 3000) |
 | `RELAY_OPERATOR_PORT` | Operator page (default 3847) |
-| `RELAY_BIND_HOST` | Listen address (`127.0.0.1` locally, `0.0.0.0` in Docker) |
-| `RELAY_AUTO_RESUME_MS` | Auto-resume an escalation (CI / evidence) |
-| `RELAY_INTERVENTION_TTL_MS` | Unattended escalation TTL (default 120000); then abandon + release session |
-| `RELAY_OPERATOR_ID` | Default operator id on the claim form |
-| `RELAY_CONSOLE_SKIN` | `cu-west` serves the tenant-14 chrome (Find Member / Submit Request) |
-| `RELAY_VAULT_tenant_9_teller` | `username:secret` for `vault://tenant-9/teller`. Never logged. |
+| `RELAY_BIND_HOST` | Console bind address (`0.0.0.0` in Docker) |
+| `RELAY_INTERVENTION_TTL_MS` | How long to wait for a human (default 120000) |
+| `RELAY_VAULT_tenant_9_teller` | Credential for `vault://tenant-9/teller`. Never logged. |

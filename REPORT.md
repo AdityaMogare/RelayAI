@@ -2,285 +2,548 @@
 
 ## 1. Architecture
 
-RelayAI is a single Node process with five seams: **Surface**, **LLM**, **Artifact**, **Policy**, and **Control**. Discovery and replay share the Surface and Policy; only discovery calls an LLM. That is the product claim in code form: the model discovers, the artifact is the capability, replay is production.
+One Node process. No queue, no service mesh, no application database. Nothing
+here needs them, and building them would have been the wrong signal.
 
-A CLI wires the adapters. There is no queue, no service mesh, and no application database — on purpose. **Artifacts and runs are different lifecycles, so they are different stores.** Capabilities are versioned JSON in `capabilities/`, reviewed in PRs like code. Successful mutating runs append one line to `runs/ledger.jsonl` (generated on the first mutating run; a sample line is committed so a fresh clone has something to grep). A reviewer diffs a capability; an operator greps a ledger. Putting both in Postgres would mix an editable contract with append-only operational data.
+There are two paths through the code and they share almost nothing:
 
-Between sequenced capabilities, state does not live in the artifact. It lives on the **Surface** (the live browser session: URL, cookies, DOM) and in the **invocation bag** (typed outputs the caller passes to the next invoke). `uses` runs children on that same Surface, so lookup's member page is still there when file-dispute clicks Disputes. A one-shot CLI `replay` is one session; a calling agent that wants three capabilities in sequence keeps the Surface and the bag.
+- **Discovery** runs once. It's slow, it costs money, it uses an LLM.
+- **Replay** runs forever. It's fast, it's free, it never touches a model.
 
-The Surface port (`observe` / `act` / `pause` / `resume`) is the heterogeneity boundary. Playwright implements it for the credit-union console; `DesktopSurface` resolves the same locators against a fake OS accessibility tree (`npm run desktop-replay`) and does not change the artifact or the replay engine. The LLM port is similarly swappable (Anthropic, OpenAI, or a scripted client for tests).
+Between them sits one file. It is the only thing that crosses.
 
-Trade-off: headed Playwright is required for a real live-session handoff, which makes unattended CI use headless plus an auto-resume waiter. I accepted that split rather than fake the session.
-
-```mermaid
-flowchart LR
-  D[Discovery LLM] --> C[Compile]
-  C --> A[Capability artifact]
-  A --> R[Deterministic replay]
-  R --> E{Risky step?}
-  E -->|no| S[Success / business outcome]
-  E -->|yes| L[Control lock]
-  L --> H[Pause live session]
-  H --> O[Operator claim]
-  O --> X[Disposition]
-  X --> Q[Reconcile skip vs execute]
-  Q --> S
 ```
+   "file the ACME dispute for Jane Doe"          invoke(id, {memberId, merchant,
+                    │                                        last4, reason})
+                    ▼                                          ▼
+ ┌──────────────────────────────┐            ┌──────────────────────────────┐
+ │  DISCOVERY                   │            │  REPLAY                      │
+ │  once · 17s · $0.09 · 13 LLM │            │  always · 4s · $0.00 · 0 LLM │
+ │                              │            │                              │
+ │   observe ─▶ decide ─▶ act   │            │   govern ─▶ validate ─▶      │
+ │      ▲                  │    │            │   idempotency ─▶ overlay ─▶  │
+ │      └──────────────────┘    │            │   precondition ─▶ STEP LOOP  │
+ │            │ compile()       │            │                              │
+ └────────────┼─────────────────┘            └────┬──────────────┬──────────┘
+              ▼                                   │              │ risky
+   ╔══════════════════════════╗                   │              │ or stuck
+   ║  capabilities/X.json     ║ ─────────────────▶│              ▼
+   ║  sha256: e072c3dd45b4…   ║   load + verify   │       ┌──────────────┐
+   ║                          ║      same hash    │       │ ControlPlane │
+   ║  THE SEAM                ║                   │       └──────┬───────┘
+   ╚═══╦══════════════════╦═══╝                   │              ▼
+       ▲                  ▲                       │       ┌──────────────┐
+   review +         overlays/tenants/*.yaml       │       │ Operator     │─▶ 👤
+   approve          (cannot change risk)          │       │  :3847       │◀─
+   (2 people)                                     ▼       └──────────────┘
+                                          ┌──────────────────────┐
+                                          │  RunResult — 7 kinds │
+                                          └──────────┬───────────┘
+                       ┌─────────────────────────────┼────────────────┐
+                       ▼                             ▼                ▼
+                runs/ledger.jsonl            evidence/<run>/      drift score
+                idempotency + audit          log, png, result     → rediscover
+
+   Both paths reach the app the same way:
+        DISCOVERY ─┐
+                   ├─▶  Surface port  ─▶  Policy  ─▶  [ Legacy bank UI ]
+        REPLAY ────┘
+```
+
+That split is the bet this project makes. **If the recording is detailed enough,
+replay never needs the model.** If it isn't, you quietly put an agent back into
+production and lose the thing you were trying to gain.
+
+**Five boundaries.** Surface (how we see and act on a screen), LLM (which model,
+or none), Artifact (the recording), Policy (what's allowed), Control (who's
+driving). Both paths go through Surface and Policy. Only discovery touches LLM.
+The replay engine does not import Playwright.
+
+**Two stores, on purpose.** Capabilities are JSON files reviewed in a pull
+request. Runs that change something append a line to `runs/ledger.jsonl`. One is
+an editable contract, the other is an audit trail you never edit. Putting both in
+Postgres would mix them up.
+
+**State between chained capabilities** lives in two places: the live browser
+session, and a bag of typed outputs passed along. `uses` runs a child capability
+on the same session — which is why `verify-and-file-dispute` starts at step
+`s03`: the member search belongs to `lookup-member-savings` and was never
+re-recorded.
+
+**The trade-off I accepted.** A real handoff needs a visible browser, so it can't
+run headless in CI. Rather than fake it, CI runs a scripted operator and those
+runs are labelled `operatorKind: "scripted"`. One run with a real person is
+committed separately.
+
+---
 
 ## 2. Artifact schema
 
-A capability is a function, not a transcript. The schema (`schemaVersion: "1.1"`) is written so a reviewer can read one `capabilities/*.json` cold — no `engine.ts` open — and answer: what it does, what it needs, what it returns, what it breaks, and who made it.
+A capability is a function, not a keystroke recording. You should be able to open
+one JSON file with no code in front of you and answer five questions: what does
+it do, what does it need, what does it give back, what does it break, who made it.
 
-- **Contract** — `id`, `parameters[]`, `outputs[]`, prose `description`
-- **Binding** — `app.vendorId` + `surfaceKind`, not a hostname
-- **Blast radius** — `sideEffects.kind`: `none` | `creates` | `mutates` | `irreversible`, plus `compensation` (what a human does to undo it). A calling agent sees this before invoke. Step notes are not the contract.
-- **Preconditions** — `requiresSession`, `requiresRole`, `entryCheckpoint`. Replay asserts the entry screen *before step 1*. If file-dispute is invoked off the member record, it fails `PRECONDITION_FAILED` at the door, not on a missing Disputes link at step 4.
-- **Composition** — `uses[]`. `verify-and-file-dispute` and `open-sub-account` invoke `lookup-member-savings` instead of re-recording Search. The catalog is a library.
-- **Provenance** — `discoveredAt`, `discoveredBy`, `model`, `promptHash`, `evidenceRunId`. In a regulated shop, “which model wrote this, from which run” is a compliance question.
-- **Per-step budget** — `timeoutMs` and `retryBudget` live on the step. The engine stays generic.
-- **Steps** — ordered actions with ranked locators, optional `inputFrom`, `risk`, checkpoints
-- **Exceptional states** — detectors with an explicit class (`business_outcome` | `recoverable` | `transient` | `hard_failure` | `needs_human`)
-- **Anti-checkpoints** — vendor “wrong screen” text; if it holds, you are lost
-- **Success** — a final checkpoint the caller can trust, plus typed outputs (`money` → `{ currency, minor }`)
+Here's the real one, with what each part is for and who reads it:
 
-If the artifact says a flow is irreversible and the caller ignores that and replays twice, two things stop it: unattended replay still will not click Confirm without `--approve-risky` or a human resume; and a successful mutating run appends the idempotency key to the ledger. A second invoke with the same key returns `IDEMPOTENCY_CONFLICT` even with `--approve-risky`. `--approve-risky` gates the click; the ledger gates the duplicate. Compensation on the artifact tells the human how to undo the first one.
+```jsonc
+{
+  "schemaVersion": "1.1",
+  "id": "verify-and-file-dispute",
 
-**Schema migration.** `1.x` is additive. `migrate()` upgrades `1.0` → `1.1` at load (fills `sideEffects`, `preconditions`, `uses`, `provenance`, per-step timeout/retry). On-disk 1.0 files still load; migrate is a read adapter, not a rewrite of git. `2.0` is a breaking rewrite. The engine does not guess: it throws `UNSUPPORTED_SCHEMA`. The 4,000 recorded 1.x artifacts stay loadable until a dedicated 2.0 migrator exists.
+  // Read by a CALLING AGENT, before it invokes.
+  "sideEffects": {
+    "kind": "irreversible",
+    "compensation": "Teller withdraws the case from the dispute queue in the core.
+                     Automation cannot un-file a Confirm."
+  },
 
-Locators are a11y-first (`role` + exact `name`), then label, then text, then CSS — the compiler emits that ranked chain on every targeted step, from the observation after each action. Per-step checkpoints are derived from the observation delta (url, then title, then newly appeared text), with discovery literals stripped so member IDs do not bake into the artifact. CSS is last because legacy cores do not have test IDs and because a broad `cell` name match on a nested table will happily return the outer wrapper. Exact accessible-name matching is what made extract return `$4,250.00` instead of the entire member record — a lesson that belongs in the schema, not a comment.
+  // Read by the ENGINE, before step 1.
+  "preconditions": {
+    "requiresSession": true,
+    "requiresRole": "teller",
+    "entryCheckpoint": { "kind": "textIncludes", "expect": "Savings Balance" }
+  },
 
-Locators are not only static names. Replay expands `:param` and `{{parameters.param}}` tokens in `name`, `text`, `selector`, and `scope`. A dispute-queue click is a role locator with `scope: { by: "row", hasText: [":merchant", ":last4"] }` (cellInRow is also legal). MDI screens that repeat "Member ID" three times use `scope: { by: "region", heading: "Dispute Detail" }`. That is how replay finds the ACME POS row without baking DSP-1001 into the artifact.
+  // Chaining. The child runs on the SAME browser session.
+  "uses": [{ "capabilityId": "lookup-member-savings", "pass": ["memberId"] }],
 
-**Parameterization is not a regex against the goal.** Typed and selected values are always lifted into `parameters.*` from the field label (`Member ID` → `memberId`). `valuesFromGoal()` is only the checkpoint *avoid* list, so a click-only recording that never types `12345` still canonicalizes `/member/12345`. Queue clicks on generic names (`Open`) take identifying cells from the row — merchant + last4, not the ID column. Change the phrasing of the goal and the artifact still parameterizes. The Jane Doe goal contains no DSP- id.
+  // Read by a HUMAN or an auditor.
+  "provenance": { "discoveredAt", "discoveredBy", "model": "gpt-4o",
+                  "promptHash", "evidenceRunId", "goal" },
 
-Vendor-level exceptional states (not-found, denied, system notice, session expiry) live on the artifact so replay does not have to rediscover them. That is also the multi-tenant hook: a tenant overlay would add detectors, not a new capability.
+  "auth":     { "credentialRef": "vault://tenant-9/teller" },
+  "approval": { "requestedBy": "analyst@relay", "approvedBy": "risk@relay" },
 
-### Discovery that isn't a compiler gift
+  // Which inputs form the duplicate-detection key. `reason` is deliberately
+  // excluded: re-filing the same transaction with a different reason is still
+  // the same filing.
+  "idempotencyKeyFrom": ["memberId", "merchant", "last4"],
 
-Both earlier committed goals handed the model every literal (`12345`, `DSP-1001`, `"Unauthorized"`). That is gone.
+  "parameters": ["memberId", "merchant", "last4", "reason"],
+  "outputs": [
+    { "name": "transactionAmount", "type": "money",  "pii": true, "locator": {...} },
+    { "name": "confirmation",      "type": "string", "pii": true, "locator": {...} }
+  ],
 
-**A — Goal without the answer.** Provenance goal on `verify-and-file-dispute` is: *Jane Doe called about an unauthorized charge from ACME POS on her card ending 4412.* The agent types the name, clicks Open on the ACME POS / 4412 row (ACME WHOLESALE is also last4 4412, so merchant disambiguates), and files Unauthorized. Parameters are `memberId`, `merchant`, `last4`, `reason`.
+  "steps": [ /* s03-disputes, s04-open-row, s06-extract-amount, s07-file,
+                s08-reason, s09-continue, s10-confirm, s11-extract */ ],
 
-**B — Escalation during discovery.** `/evidence/discovery-assisted-attest/`: unfamiliar Supervisor Attestation interstitial, the agent escalates, `teller01` clicks **I attest** on the live session, discovery resumes and compiles the human step with `assistedBy: "teller01"`. `/evidence/discovery-assisted-escalation/` is the same machinery on a Help-mash stuck lookup. §3.6 is discovery *and* replay; Confirm handoff is still `/evidence/escalate-verify-and-file-dispute/`.
-
-**C — Re-discovery loop.** Tenant `westside-drift` ships longer a11y names (`Search Members`, `Card Disputes`, `Open Row`) with **no** overlay remaps. Rank-1 misses; rank-3 substring text still hits; `needsRediscovery` is set. `--tenant westside` is the overlay-stays-green skin (Find Member / Card Claims).
-
+  "exceptionalStates": [ /* MEMBER_NOT_FOUND, PERMISSION_DENIED, VALIDATION_ERROR,
+                            SYSTEM_NOTICE, SESSION_EXPIRED, CORE_UNAVAILABLE,
+                            DISPUTE_NOT_FOUND, DISPUTE_ALREADY_FILED */ ],
+  "antiCheckpoints": [{ "expect": "Wrong screen" }, { "expect": "Screen not found" }],
+  "success": { "checkpoint": { "kind": "textIncludes", "expect": "Dispute filed" } }
+}
 ```
-npm run replay -- --capability capabilities/verify-and-file-dispute.json --tenant westside-drift
-npm run rediscover -- --capability capabilities/verify-and-file-dispute.json --tenant westside-drift --scripted
+
+And one step in full:
+
+```jsonc
+{
+  "id": "s06-extract-amount",
+  "action": "extract",
+  "outputName": "transactionAmount",
+  "risk": "safe",
+  "timeoutMs": 8000,
+  "retryBudget": 3,
+  "target": {
+    "primary":   { "by": "role",  "role": "cell", "name": "Transaction Amount" },
+    "fallbacks": [
+      { "by": "label", "name": "Transaction Amount" },
+      { "by": "text",  "text": "Transaction Amount" },
+      { "by": "css",   "selector": "[aria-label=\"Transaction Amount\"]" }
+    ]
+  },
+  "checkpoint": { "kind": "textIncludes", "expect": "Transaction Amount" }
+}
 ```
 
-v1 replay flags drift; v2 is compiled against the new names; the step diff is in `/evidence/rediscover-verify-and-file-dispute/`. Tenant-14 and `--tenant westside` are overlay-stays-green. `westside-drift` is the re-record story.
+**Four ways to find every control, best first.** Role and exact name, then label,
+then visible text, then CSS. CSS is last because legacy screens have no stable
+IDs. But the real reason for ranking isn't "a backup might save the run" — it's
+that **using a backup is a signal**. Succeed on rank 3 and confidence drops and
+the capability is flagged for re-recording. The fallback chain is a drift sensor
+that happens to also be a safety net.
 
-**D — Two models, one artifact.** Discovery is model-dependent; the artifact is not. `tests/equivalent.test.ts` and `/evidence/equivalent-models/` compile the same recording with `gpt-4o` and `claude-sonnet` provenance and get equivalent step sequences. Live dual-model is `discover --provider openai|anthropic`. This environment did not have both API keys, so those folders are compiler proof, not faked live traces.
+Queue rows are a fifth shape, not a fifth rank: `cellInRow` names the column
+inside the row that matches runtime inputs (`merchant`, `last4`). The four-rank
+chain still runs on the control it finds.
 
-**E — Cost / latency.** Replay never calls the model. Discovery of verify-and-file-dispute cost an estimated $0.09 and 13 model calls, once. Every invocation since has cost $0.00 — 50 consecutive lookup replays, 100% success, zero locator fallbacks. A servicing rep doing this by hand is ~6 minutes per case. Measured table: `/evidence/cost-comparison.json`. Duration is `discover.start` → `discover.end` on the committed logs; a later hash-stamp line is not part of the run. Tokens were not logged; cost is estimated from decide count × list prices and labeled as such.
+**Checkpoints are derived, not hand-written.** At compile time we diff the screen
+before an action against the screen after and take the first thing that changed:
+URL, then title, then newly-appeared text. Goal values are stripped first, so
+`12345` never gets baked into an assertion.
+
+**Typed outputs.** `money` becomes `{ currency: "USD", minor: 4218 }`. A calling
+agent never receives the string `"$42.18"` from something the contract called
+money. `pii: true` means the field is stripped from evidence **by name** — not by
+a regex hoping to recognise a dollar amount.
+
+**The goal doesn't contain a dispute ID.** Parameters are `merchant` and `last4`,
+and step `s04-open-row` picks the matching row out of the queue. That's how a
+real servicing screen works — you search and click a row — and it's why the
+locators have to be able to depend on runtime inputs.
+
+**Migration.** `1.x` only adds fields. `migrate()` upgrades an old file at load
+time, so a 1.0 recording still runs. A `2.0` would be breaking, and the loader
+throws `UNSUPPORTED_SCHEMA` rather than guessing.
+
+---
 
 ## 3. Determinism & error handling
 
-Replay never calls the model. It loads `capabilities/X.json` (the file `discover --id X` wrote), logs that file's SHA-256, materializes each step from parameters, walks the locator chain, waits for a short settle, and evaluates checkpoints. After every observation it runs exceptional-state detectors *before* acting, so a “Member not found” screen is classified instead of becoming a locator miss on the next extract. Missing or mistyped params are `invalid_input`, not `failed` / `uncaught`.
+Replay loads the file discovery wrote, logs its SHA-256, and never calls a model.
+`npm run verify` proves both halves: the hash on `discover.end` equals the hash
+on `replay.start`, and two replays produce byte-identical traces once timestamps,
+run IDs and ports are normalised away.
 
-Determinism is proven, not named. `npm run verify` replays the same artifact twice, strips timestamps/ids/ports, and byte-compares the remaining trace: same steps, same locators matched, same outputs. The round-trip row is scripted discovery → compile → replay of that file; `discover.end contentHash` equals `replay.start contentHash`. That is the line that proves the thing you replayed is the thing the model recorded.
+**The order of operations is the design.** Cheapest and most protective first:
 
-Every targeted step records which locator in the chain actually matched (`replay.locator`, 1-based rank). A run that succeeds via the CSS fallback is not “fine”: `needsRediscovery` is set and `confidence` drops below 1. That is the drift early-warning. Re-discover; do not keep running a degraded chain.
+```
+   kill switch / rate limit   →  stops in ~5ms, stepId "governance", no browser
+              ▼
+   validate inputs            →  invalid_input, with the exact violation
+              ▼
+   idempotency key            →  IDEMPOTENCY_CONFLICT, even with --approve-risky
+              ▼
+   resolve tenant overlay
+              ▼
+   assert entry precondition  →  PRECONDITION_FAILED at the door
+              ▼
+   step loop
+```
 
-`--dry-run` executes every reversible step and stops short of Confirm. The result is `dry_run` with `outputs` so far and `wouldExecute` for the remaining irreversible work. Bank ops can see the amount without filing.
+Inside each step:
 
-`outputs` is on every terminal status. A caller who extracted `$42.18` and then missed Confirm still gets the amount. `fail()` used to drop that.
+```
+  ┌─▶ observe()
+  │        ▼
+  │   CLASSIFY known screens   ◀── BEFORE acting. This is the whole trick.
+  │        │
+  │   ┌────┴──────┬────────────┬──────────────┬─────────────┐
+  │   ▼           ▼            ▼              ▼             ▼
+  │ business   recoverable  transient    hard_failure   needs_human
+  │ outcome    dismiss +    backoff      stop +         ops ticket,
+  │ → return   RETRY SAME   200/400/     evidence       not engineering
+  │   cleanly  STEP         800ms
+  │        ▼
+  │   anti-checkpoint? ──yes──▶ fail closed ("Wrong screen")
+  │        ▼
+  │   risky & unapproved? ──yes──▶ ControlPlane ──▶ human ──▶ "I did it" ─▶ SKIP
+  │        ▼
+  │   materialize params → policy check → act()
+  │        │                                │
+  │        │                    walk ranked locators,
+  │        │                    RECORD WHICH RANK MATCHED
+  │        ▼
+  │   coerce typed output   "$42.18" → { USD, 4218 }
+  │        │                 empty? → OUTPUT_INVALID, even if the page looks fine
+  │        ▼
+  │   checkpoint holds?
+  │        │
+  │   ┌────┴────┐
+  │   yes      no ──▶ was the step risky?
+  └───┘                  │
+   next step        ┌────┴────┐
+                   yes        no
+                    │          │
+     CHECKPOINT_AFTER_ACT   CHECKPOINT_FAILED
+     ambiguous: true + idempotencyKey
+```
 
-Honest non-determinism in replay today: wall-clock waits (settle timeout and explicit wait steps), browser rendering timing, and the app's case-number generator (this console fixtures `CASE-77201`; a real core would mint a new case).
+**Classify before acting.** I had this backwards at first. Act first and a
+"Member not found" screen sails past, then step 4 fails to find a field that was
+never going to be there. You get a locator miss and go hunting for a broken
+selector when the real answer is "that member doesn't exist."
 
 The result contract:
 
-| Status | Meaning |
+| Status | Means |
 |---|---|
-| `success` | Checkpoints held; typed outputs returned |
-| `business_outcome` | Expected domain result (`MEMBER_NOT_FOUND`, `PERMISSION_DENIED`, validation) |
-| `escalated` | Human took (or refused) the live session |
-| `dry_run` | Stopped before an irreversible step; `wouldExecute` says what was skipped |
-| `invalid_input` | Missing or mistyped parameters — not a UI failure (`stepId` is omitted) |
-| `failed` | Locator miss, anti-checkpoint, empty typed output — engineering / re-discover. Screenshot + `stepId` + `expected` + `observed`. |
-| `needs_human` | Session expired, interstitial that will not leave — ops, not a locator ticket. |
+| `success` | Checks held, typed outputs returned |
+| `business_outcome` | A real answer — "no such member", "already filed" |
+| `dry_run` | Stopped before the irreversible part; says what it would have done |
+| `invalid_input` | Bad parameters. Not a UI problem, so no step ID |
+| `escalated` | A human has, or refused, the session |
+| `failed` | Engineering ticket — locator miss, wrong screen, bad value |
+| `needs_human` | Ops ticket — session died, popup won't leave |
 
-Money outputs are parsed against the declared type. `$4,250.00` becomes `{ currency: "USD", minor: 425000 }`. An agent never receives a display string from something the artifact called `money`.
+Those last two are a **routing decision**. Merging them means someone reads a
+session timeout as a bug in the recording.
 
-Retry is per class, not a global 3-attempt loop: `transient` (503 / timeout) backs off 200/400/800 ms up to the step `retryBudget`; `recoverable` dismisses and retries **the same step** with the same cap and no backoff; `hard_failure`, `needs_human`, and `business_outcome` never retry. A locator miss after settle is deterministic — it does not get a second click.
+**Retry depends on the class.** A 503 backs off 200/400/800ms. A known popup is
+dismissed and the **same step** is retried. A locator miss after the page has
+settled is deterministic and does not get a second click. Business outcomes never
+retry. The word "same" in "retry the same step" is doing real work — treating a
+dismissed popup as "move on" silently skipped work in an early version.
 
-Anti-checkpoints (`Wrong screen`, `Screen not found`) fail closed. Cheaper than only asserting positives: if that text is on the page, you are lost.
+**The case most systems get wrong.** Dispute `DSP-1003` renders perfectly. The
+"Transaction Amount" heading is present so the checkpoint passes — but the cell
+is empty because the mainframe behind it timed out. A screen-only runner calls
+that a success and returns nothing. We fail it with `OUTPUT_INVALID`, because the
+declared type is `money` and it parsed to empty. **You judge on the value, not
+the page.**
 
-Irreversible steps carry an idempotency key. If a risky act returns ok but the checkpoint does not hold, the result is `CHECKPOINT_AFTER_ACT` with `ambiguous: true`. The honest answer to “did Confirm land?” is that I cannot always tell.
+**When I can't tell.** If a risky click returns OK but the checkpoint doesn't
+hold, I don't know whether the money moved. That returns `ambiguous: true` plus
+the idempotency key. A retry with that key is safe; a blind second Confirm is how
+you open two accounts.
 
-### Failure-mode table (observed, not hypothetical)
+**Honest non-determinism:** wall-clock settle waits, browser render timing, the
+fake core's case-number generator (disputes fixture `CASE-77201`; cards mint
+`CASE-88xxx`).
 
-Every row is a committed `/evidence` folder from a live Chromium run against the local console.
+### Every class, with a recorded run
 
-| Class | Observed example | Evidence | Result contract |
-|---|---|---|---|
-| typed `success` | member 12345 lookup | `replay-lookup-success/` | `{ status: "success" }`; evidence `savingsBalance` is `{ currency: "USD", minor: "[REDACTED]" }`; `npm run verify` still asserts `{ currency: "USD", minor: 425000 }` |
-| `business_outcome` | member `99999` | `replay-lookup-not-found/` | `{ status: "business_outcome", classify: "business_outcome", code: "MEMBER_NOT_FOUND", stepId: "s02-click" }` |
-| `recoverable` | `?notice=1` System Notice | `replay-recoverable-notice/` | dismiss → `replay.retry` `{ class: "recoverable", sameStep: true, stepId: "s01-type" }` → `{ status: "success" }` |
-| `hard_failure` | extract `Savins Balance` | `replay-hard-failure-locator/` | `{ status: "failed", classify: "hard_failure", code: "LOCATOR_MISS", stepId: "s03-extract", expected: "locator cell \\"Savins Balance\\"", observed: "No locator matched for extract" }` + `failure-s03-extract.png` |
-| `needs_human` | `?expired=1` | `replay-needs-human-expired/` | `{ status: "needs_human", classify: "needs_human", code: "SESSION_EXPIRED", stepId: "s00-navigate" }` + screenshot |
-| empty typed output | DSP-1003 empty amount | `replay-output-empty-amount/` | `{ status: "failed", classify: "hard_failure", code: "OUTPUT_INVALID", stepId: "s06-extract-amount", expected: "transactionAmount: money { currency, minor }", observed: "(empty)" }` |
-| recoverable cap | `?notice=always` | `replay-recoverable-exhausted/` | `{ status: "needs_human", code: "RECOVERABLE_EXHAUSTED" }` — “SYSTEM_NOTICE returned on every attempt (cap 3)” |
-| `invalid_input` | `memberId=jane` on a `number` param | before step 1 | `{ status: "invalid_input", code: "INVALID_INPUT", violations: [{ path: "parameters.memberId", expected: "number", observed: "jane" }] }` — no `stepId` |
-| frameset discovery | `/?legacy=1` | `discovery-legacy-frameset/` | Scripted discover walks banner/nav/work frames; compiled artifact replays |
-| assisted discovery | Help × 2 then escalate | `discovery-assisted-escalation/` | Human clicks Search; artifact `provenance.assistedBy` / step `assistedBy` |
-| tenant overlay | CU West | `replay-tenant-westside/` | Same lookup artifact; Search → Find Member |
-| rank-3 drift | extract `Savins` role/label | `replay-drift-rediscovery/` | Rank 3 text hit, confidence < 1, `promoteHits` v2, rank-1 green |
-| reauth | `?expireMid=1` | `replay-session-expired-reauth/` | Operator Sign In; Search click skipped because `/member` already holds |
-| ambiguous row | last name Doe, 14 hits | `replay-ambiguous-row/` | Open scoped to `:memberId` → Jane `$4,250.00` |
-| policy abort | Wire Transfer | `policy-blocked-admin-wire/` | Chromium `blockedbyclient` on `GET /admin/wire`; `policy.blocked` + `POLICY_VIOLATION` |
-| soak | N=50 lookup | `stability-50/` | success rate, fallback rate, p50/p95 duration |
+| Class | Example | Evidence |
+|---|---|---|
+| success | member 12345 | `replay-lookup-success/` |
+| business_outcome | member 99999 | `replay-lookup-not-found/` |
+| business_outcome | second Confirm of DSP-1001 | `replay-verify-dispute-already-filed/` |
+| dry_run | stop before Confirm | verify row `dispute dry-run` |
+| invalid_input | missing `memberId` | verify row `lookup invalid-input` |
+| recoverable | `?notice=1`, dismissed, same step retried | `replay-recoverable-notice/` |
+| recoverable, capped | `?notice=always` | `replay-recoverable-exhausted/` |
+| failed | misspelt locator | `replay-hard-failure-locator/` |
+| failed | blank amount, DSP-1003 | `replay-output-empty-amount/` |
+| failed | `GET /admin/wire` aborted | `policy-blocked-admin-wire/` |
+| needs_human | `?expired=1` | `replay-needs-human-expired/` |
+| escalated | card 3301, supervisor | `escalate-batch-business-account/` |
+| rate limited | 31st run in an hour | `replay-batch-cap-exceeded/` |
+| idempotency | second 4412 reissue | `replay-batch-idempotency/` |
 
-### Probes
-
-**The dispute screen loads but the amount field is empty because the mainframe timed out behind it. Which class is that, and how do you know?** DSP-1003. The heading “Transaction Amount” is present, so the extract checkpoint holds and a screen-only runner would call it success. Replay still fails `OUTPUT_INVALID` / `hard_failure` because the declared type is `money` and the cell parsed to empty. You know from the **output**, not the screen. Evidence: `replay-output-empty-amount/`.
-
-**Your recoverable retry is capped at 3. What if the interstitial fires every single time?** It stops. After three dismiss-and-retry-the-same-step cycles it returns `needs_human` / `RECOVERABLE_EXHAUSTED` rather than looping. That is an ops ticket (“this dialog will not leave”), not a locator bug. Evidence: `replay-recoverable-exhausted/`.
-
-**A step succeeded but the checkpoint failed. Did the action happen or not?** I cannot always tell. That is why irreversible steps are keyed (`idempotencyKey` on the result and in `replay.idempotency`). `CHECKPOINT_AFTER_ACT` sets `ambiguous: true`. A retry with the same key is safe to send; a second Confirm without a key is how you double-open a share. Compensation is declared on the capability (`sideEffects.compensation`), not invented in a log line.
-
-Wait strategy is deliberately boring: `domcontentloaded` plus a short settle. These apps are slow in the “server think” sense, not in the SPA sense; polling the a11y tree for the checkpoint is more honest than `networkidle`. HTTP 5xx on navigate is `retryable` and uses the transient budget. Confirm stays disabled until a reason is selected — Playwright's actionability wait is the wait strategy, not `sleep`.
-
-### 3.3 Framesets, sibling cells, and a locator that is allowed to rot
-
-`?legacy=1` is a real frameset (`nav` + `work`), not a decorative ticker iframe. A search in `nav` loads the member record in `work` without changing the top URL, so `urlIncludes: "/member"` does not hold and the checkpoint has to be `textIncludes`. `locateInFrames` and `observe()` across frames are load-bearing.
-
-The member record is a pair of sibling `<td>`s with no `aria-label` and a generated id (`ctl00_ctl32_dgAcct_ctl07_lblVal`) that changes every render. `getByRole('cell', { name: 'Savings Balance' })` hits the label; `readExtractedValue` takes the following sibling. A CSS primary pointed at `ctl04` misses, the role fallback hits, and `needsRediscovery` fires with `confidence < 1`. Tests in `tests/legacy.test.ts`.
-
+---
 
 ## 4. Heterogeneity & multi-tenant
 
-**Surfaces.** The artifact stores intent (click the control whose role is `button` and name is `Search`). The web adapter resolves that through every frame — required for the ticker iframe and for real framesets. `DesktopSurface` resolves the same locators against a fake OS accessibility tree and passes the lookup replay suite (`npm run desktop-replay`). Playwright calls never leak into the JSON.
+**Surfaces.** The recording stores intent — "click the control whose role is
+button and whose name is Search" — not Playwright calls. The web adapter resolves
+that through every frame, which the frameset skin requires. `DesktopSurface`
+resolves the same locators against an accessibility tree and runs the same lookup
+capability (`npm run desktop-replay`). The engine imports neither.
 
-**Tenants.** Capabilities bind to `vendorId` (here `relay-core`), not to a hostname. Two institutions on the same vendor share one recorded artifact. Per-tenant difference lives in a YAML overlay a non-engineer can read: `overlays/tenants/tenant-14.yaml`.
-
-Resolution order (later wins):
+**Tenants.** Capabilities bind to a vendor product, not a hostname. Differences
+live in YAML a non-engineer can read:
 
 ```
-base artifact          recorded locators, risk, steps, side effects
-        │
-        ▼  copy aliases + extra detectors (cannot change risk)
-vendor pack            overlays/vendors/<vendorId>.yaml
-        │
-        ▼  copy remaps + extra detectors (cannot change risk)
-tenant overlay         overlays/tenants/<tenantId>.yaml
-        │
-        ▼  --base-url --input --tenant (cannot change locators)
-run params
+   base recording          recorded once against Demo CU
+         │
+         ▼  vendor pack         overlays/vendors/relay-core.yaml
+         │
+         ▼  tenant overlay      overlays/tenants/tenant-14.yaml
+         │                        copy: { Confirm: Submit Request }
+         ▼  run params          --base-url --input --tenant
+         │
+         ▼
+   resolved capability
+
+   CAN change:  control names, extra detectors
+   CANNOT:      risk, steps, sideEffects, id, vendorId
+                (strict schema + re-assert after the rename)
 ```
 
-Conflict rules: overlays may remap accessible names and append detectors. They cannot set `risk`, `steps`, `sideEffects`, `id`, or `vendorId` — the schema is `.strict()` and the resolver re-asserts that Confirm is still `risky` after `Confirm` → `Submit Request`. Run params rewrite the host, not the locators.
+That last constraint is the point. Renaming "Confirm" to "Submit Request" must
+not be able to turn the dangerous button into a safe one.
 
-The demo: one artifact (`lookup-member-savings`), recorded once, green against Demo CU (tenant-9), CU West (tenant-14, **Find Member** / **Submit Request**), and Westside (`--tenant westside`: Find Member, Card Claims, Branch Verification interstitial, Checking-before-Savings). `npm run portability` prints what matched rank-1, what fell back, and what the overlay overrode. `westside-drift` is the no-remap rank-3 story for `npm run rediscover`.
+One recording runs green against Demo CU, CU West (Find Member / Submit Request)
+and Westside (different wording, extra popup, fields reordered).
+`npm run portability` prints what matched first-choice, what fell back, and what
+the overlay overrode.
 
-Recorded URLs canonicalize `/member/12345` → `/member/:memberId` at compile time; replay expands from inputs.
+**Knowing before a customer calls.** The ledger records which rank each locator
+matched and whether checks failed. `npm run drift -- --tenant tenant-9` scores
+recent runs and flags re-discovery. Same signal as the per-run confidence score,
+pointed at a tenant. `npm run rediscover` then replays the old file on the
+drifted skin, records a v2, diffs the two, and replays the new one.
+`evidence/rediscover-verify-and-file-dispute/` is that loop.
 
-### Probes
+**Before running somewhere new,** `npm run probe` checks the entry screen
+read-only. If it doesn't match, we don't find out by clicking Confirm in the
+wrong app.
 
-**Tenant 14 renamed 'Confirm' to 'Submit Request'. What's the smallest change that fixes it, and who makes it?** One line in `overlays/tenants/tenant-14.yaml`: `Confirm: Submit Request`. Tenant ops edit the overlay. They do not re-record. They do not touch `step.risk`. `npm run overlay -- --capability capabilities/open-sub-account.json --tenant tenant-14` prints the file and the who.
-
-**How do you know a capability broke for tenant 9 before a customer calls you?** The run ledger stores fallback-locator hits and checkpoint misses. `npm run drift -- --tenant tenant-9` scores the last N runs (`0.6 × fallback rate + 0.4 × checkpoint-miss rate`). Crossing 15% fallback, 10% miss, or 0.12 combined flags re-discovery. Same machinery as per-run `needsRediscovery`, pointed at a tenant.
-
-**We're onboarding a tenant on the same vendor product, version 4.2 instead of 4.1. Re-record, or reuse?** Probe first (`npm run probe -- --tenant tenant-14`). If the entry screen matches — or matches after a copy overlay — reuse. If the probe fails, the artifact is not bound to that app and replay will not click Confirm to find out. Re-record only when the screen structure moved, not when a button was renamed.
-
-**Your Surface port has one implementation. Convince me it isn't fictional.** `src/surfaces/desktop.ts` walks a fake accessibility tree. `tests/desktop.test.ts` and `npm run desktop-replay` run the same lookup capability the Playwright adapter runs. The engine does not import Playwright.
-
-I implemented two visibly different skins of one vendor app, a second Surface that actually runs, and a `?legacy=1` frameset that forces the ranked locator chain, sibling-cell extract, and text checkpoints. `?tenant=westside` selects a third skin on the same process. The schema does not assume a clean DOM, a single document, or a stable host.
-
+---
 
 ## 5. Escalation & handoff
 
-Control is a first-class session field: `automation` | `human`. Automation must hold the lock to `act`. Escalation writes an intervention (capability, step, URL, session id, reason, screenshot), calls `surface.pause()` on the **same** Playwright page, and waits.
+Who is driving is an explicit field: `automation` or `human`. `Surface.act()`
+refuses when automation doesn't hold the lock, so this is enforced rather than
+agreed.
 
-```mermaid
-sequenceDiagram
-  participant Replay
-  participant Control
-  participant Operator
-  participant Surface
-  Replay->>Control: escalate (raised)
-  Control->>Surface: pause (lock)
-  Operator->>Control: claim
-  Control->>Control: in_control
-  Operator->>Surface: Confirm (or not)
-  Operator->>Control: return (disposition)
-  Control->>Control: returned
-  Control->>Surface: resume
-  Replay->>Surface: re-observe
-  Replay->>Replay: reconcile skip vs execute
-  Control->>Control: resolved or abandoned
+```
+  automation                 ControlPlane          operator :3847        human
+      │                           │                      │                 │
+      │ reaches s10-confirm       │                      │                 │
+      ├───── escalate ───────────▶│                      │                 │
+      │                           ├── raised ───────────▶│                 │
+      │                           │   why / step / url / │                 │
+      │                           │   screenshot / the   │                 │
+      │                           │   check it wants     │                 │
+      │◀── capture "before" ──────┤                      │                 │
+      │    url+title+png+a11y     │                      │◀── claim ───────┤
+      │                           │◀── in_control ───────┤    teller01     │
+      │  pause() — SAME page,     │                      │                 │
+      │  red banner, session id   │                      │ clicks Confirm  │
+      │  control = human          │                      │ in THAT window  │
+      │  act() REFUSES            │                      │                 │
+      │                           │◀── returned ─────────┤◀─ "I did it" ───┤
+      │◀── disposition ───────────┤   completed_by_human │                 │
+      │◀── capture "after" + diff ┤                      │                 │
+      │  resume()                 │                      │                 │
+      │                           │                      │                 │
+      │  RE-OBSERVE · re-run detectors · re-assert checkpoint              │
+      │       │                   │                      │                 │
+      │  already holds ──▶ SKIP the click                │                 │
+      │                           │                      │                 │
+      │  (scripted dispute run: filings DSP-1001 count = 1)                │
+      │                           │                      │                 │
+      └── nobody claims in 120s ─▶ abandoned, risky step NOT executed
 ```
 
-The intervention is a lifecycle, not a boolean: `raised → claimed(by whom) → in_control → returned → resolved | abandoned`, each transition timestamped on `intervention.json`. Operator identity is required to claim. Handback is an explicit step disposition: `completed_by_human` (skip), `not_done` (execute once), or `abort`. After resume, replay re-observes, re-runs detectors, and re-asserts the paused-page `entryCheckpoint`. If the operator already completed the work, the post-condition holds and Confirm is not clicked again. If they wandered off the page, the run stops with `PRECONDITION_LOST` instead of clicking Confirm on the wrong screen.
+The lifecycle is real, not a flag:
 
-The waiter is a local operator console (`:3847`): queue, claim, live URL + screenshot of the paused window, disposition radios, TTL countdown. The headed bank-console window is the same Playwright session — a red `Live Relay session <id>` banner is injected on pause so the operator can see they are not on a fresh login. Before pause and after return we record url, title, screenshot, and an a11y-snapshot diff. That is the §3.6 “what the human did” log; the operator note is not the proof. `RELAY_AUTO_RESUME_MS` exists so CI can exercise the waiter; the note says `auto-resume`. Unattended waiters no longer spin forever: `RELAY_INTERVENTION_TTL_MS` (default 120s) abandons the intervention, does **not** execute the risky step, and navigates the teller session to `about:blank`. If the human clicked Confirm and then closed the tab without returning, that is this path — the app write stands, automation does not click again.
+```
+raised → claimed(operatorId) → in_control → returned(disposition) → resolved
+   └──────────── TTL 120s ─────────────────────────────────────▶ abandoned
+```
 
-One Playwright session can be `in_control` of at most one intervention. A second capability that escalates on the same surface is abandoned with a pointer to the holder. The operator console queues the rest: dispute filing outranks sub-account opening; unclaimed items stay `raised` until claimed or the TTL fires.
+Handing back offers three answers: **I did it** (skip), **I didn't** (do it
+once), **abort**. That third option is the fix for the worst bug in the first
+version — automation clicked Confirm again after a person already had. In a bank
+that's a duplicate filing.
 
-Risky confirms are conservative: unattended replay *blocks* rather than clicking Confirm in the dark. `/evidence/escalate-verify-and-file-dispute` is the scripted bar: `teller01` takes the live session, files DSP-1001, hands back `completed_by_human`, automation skips, and a real `node:sqlite` `SELECT count(*) FROM filings WHERE dispute_id='DSP-1001'` equals 1. That waiter stamps `operatorKind: "scripted"` — the 200ms claim-to-return is honest, not a teller. `/evidence/escalate-human-handoff/` is the headed operator-console claim: `teller01` claimed on :3847 (`operatorKind: "human"`), then TTL expired before return and Confirm was not executed. Folder name and `operatorKind` match.
+**What the human did** is recorded as data: URL, title, screenshot and an
+accessibility-tree diff, before and after. The operator's note is not the proof.
 
-What is real: the lock, the same browser context, the lifecycle record, operator identity, disposition, TTL abort, before/after handoff capture, skip-vs-execute reconciliation, app-side write count. What is mocked: co-browse, keystroke capture, and any phone channel.
+**One at a time.** A session can be held by one intervention. A second capability
+escalating on the same surface is abandoned with a pointer to the holder
+(`SESSION_HELD`). Dispute filings outrank account openings; lookups still
+enqueue, they just wait behind them.
 
-Routing: irreversible filings land on the single local operator queue (port 3847) ahead of account-opening confirms; lookup never queues. An operator claims by id — at most one `in_control` at a time — works the headed window already showing that session id, then returns a disposition. If nobody claims before the TTL, the intervention is `abandoned`, the teller page is dropped, and the risky step is not executed. A second live session is a second Playwright context with its own lock; it waits in `raised` on the same console until the first holder returns or expires, rather than stealing the browser.
+`evidence/escalate-verify-and-file-dispute/` is the skip path
+(`operatorKind: "scripted"`, filings count = 1). `evidence/escalate-human-handoff/`
+is a real person (`operatorKind: "human"`): teller01 claimed, the two-minute wait
+ran out, Confirm was not pressed.
+
+Discovery can hand off the same way. If the model is stuck, a teller acts on the
+live session and the compiled file stamps `assistedBy`
+(`evidence/discovery-assisted-attest/`).
+
+**Real:** the lock, the same browser context, the lifecycle record, operator
+identity, the disposition, the TTL, before/after capture, the skip decision, and
+the count in the database on the scripted dispute run. **Mocked:** co-browsing,
+keystroke capture, a phone channel.
+
+---
 
 ## 6. Safety
 
-Host allow is necessary and not a guardrail. The agent shares a browser with `/admin/wire`; `policy/allowlist.yaml` is **method + path**, default deny. `POST /member/*/disputes/*/submit` is allowed. `GET` on that path, and on sub-account Confirm, is not — the console returns 405 and the allowlist would abort the request first. `POST /admin/*` is never allowed. Playwright aborts any request that misses the list. **Could this agent ever reach the wire-transfer screen? No.** Evidence: `policy-blocked-admin-wire/` — a live Chromium click on **Wire Transfer** is aborted at the route layer (`policy.blocked`, `POLICY_VIOLATION`), not only by a unit test.
+**Allowing hosts is not a guardrail.** The agent shares a browser with
+`/admin/wire`. So the allowlist is method plus path, default deny, enforced by
+aborting the request in the browser itself:
 
-Credentials are references: `auth.credentialRef: "vault://tenant-9/teller"`. Replay resolves that from `RELAY_VAULT_tenant_9_teller` (or a test vault) in memory, types it into `/login`, and never writes the secret to an artifact, log, or screenshot caption. `tests/legacy.test.ts` greps the evidence directory for the vault secret and expects zero hits. Mid-run `?expireMid=1` (or `?expire-after=1` with auth on) kills the session → `SESSION_EXPIRED` → the operator re-authenticates on the live session → replay resumes.
+```
+   every HTTP request from the page
+              ▼
+   ┌────────────────────────┐
+   │ page.route("**/*")     │   method + path glob, DEFAULT DENY
+   │   assertRequest()      │
+   └──────┬──────────┬──────┘
+       allowed     denied
+          ▼          ▼
+      continue   abort("blockedbyclient")
+```
 
-Outputs carry `pii: true`. Evidence redacts those fields by name — not by guessing `$4,250.00` or “Jane Doe” with a regex. A money output stays a money object: `{ currency: "USD", minor: "[REDACTED]" }`. String PII is `[REDACTED-PII]`. Regex remains a backstop for SSNs, bearer tokens, and `ACCT-` strings, and **it misses names and money**. We also stopped dumping 2,000-character a11y snapshots into `log.jsonl`; persisted observations are URL, title, and control names.
+```yaml
+allowedRoutes:
+  - { method: POST, path: "/member/*/disputes/*/submit" }
+deniedRoutes:
+  - { method: "*",  path: "/admin/**" }
+```
 
-Committed traces live under `/evidence`. Open `evidence/index.html` for the catalog (scenario, status, code, duration, locator ranks, traces). Failure and handoff stills the docs cite are committed; other PNGs stay local. GIFs are committed.
+Could this agent reach the wire-transfer screen? No — and that's a mechanism, not
+a promise.
 
-Evidence TTL is **14 days**. `npm run evidence:purge` deletes expired run directories and old PNGs. Failure and handoff stills the docs cite stay in git; other PNGs stay local.
+**Credentials are references.** `vault://tenant-9/teller` resolves into memory at
+run time. The secret never lands in a recording, a log, or a screenshot caption.
 
-Blast radius: 30 invocations per capability per tenant per hour, 120 per tenant per hour (`policy/runtime.yaml`). A bug that loops replay is an incident without that cap.
+**Redaction is structural.** Outputs carry `pii: true` and are stripped by name.
+Regex is a backstop for SSNs and tokens, and I'll say what it misses: names and
+amounts. That's exactly why we classify instead of guessing.
 
-Kill switch: `npm run kill -- --capability open-sub-account` or `--tenant tenant-9` edits `policy/runtime.yaml`. No deploy.
+**Risk is decided at review time.** Guessing from a button's name is how "Submit
+search" becomes dangerous and "Post payment" becomes safe. The flag lives on the
+reviewed recording; `npm run review` fails if a Confirm step is marked safe.
 
-Two-person rule: irreversible / high-value capabilities need `approval.requestedBy` ≠ `approval.approvedBy`. `npm run approve -- --requested-by analyst@relay --approved-by risk@relay`.
+**Two people for irreversible work.** `requestedBy` must differ from `approvedBy`.
 
-Risk lives on the step, stamped at approval. Runtime keyword matching is how you class “Submit search” as risky and “Post payment” as safe. Replay never does that. `npm run review` is the diff: Confirm marked `safe` fails the gate.
+**Brakes.** 30 runs per capability per hour, 120 per tenant, plus an off switch
+that needs no deploy. Governance is checked before the browser opens, so a capped
+run costs 5 milliseconds.
 
-### Probes
+**Retention.** Evidence expires after 14 days. Only the screenshots the docs
+point at are committed; the rest are generated and purged.
 
-**Regulator asks what this automation touched for member 12345 last Tuesday.** `npm run audit -- --member 12345 --from 2026-09-08 --to 2026-09-09` reads `runs/ledger.jsonl`: capability, tenant, credentialRef, routes (`/member/12345`, `/member/12345/disputes/...`), status. A sample line is committed; live mutating runs append. That ledger is the answer, not a raw a11y dump.
-
-**Where do credentials come from during replay?** `capability.auth.credentialRef` → vault resolve at process start. Never from the JSON on disk as a password literal.
-
-**Someone commits a capability with a risky step marked safe. What catches it?** The approval gate and the diff (`reviewCapability` / `npm run review`), not the runtime. Replay will click whatever `step.risk` says.
-
-**Your redaction is regex. What does it miss?** Jane Doe. `$4,250.00`. Any name or amount that is not an SSN / bearer / `ACCT-` token. That is why outputs are classified `pii: true`. The persisted payoff is `{ currency: "USD", minor: "[REDACTED]" }`, not a deleted field.
-
-## Traceability
-
-Requirement → module → evidence. One row each.
-
-| Brief | Code | Evidence |
-|---|---|---|
-| Goal without the answer | `src/agent/scripts.ts` (`JANE_DOE_DISPUTE_GOAL`), `src/artifact/compile.ts` | `discovery-verify-and-file-dispute/`, `capabilities/verify-and-file-dispute.json` |
-| §3.3 recoverable retry | `src/replay/retry.ts`, `src/replay/classifier.ts` | `replay-recoverable-notice/`, `replay-recoverable-exhausted/` |
-| §3.3 framesets / sibling cells | `src/surfaces/locators.ts` (`locateInFrames`), `tests/legacy.test.ts` | `discovery-legacy-frameset/`, `replay-legacy-hostile/` |
-| §3.4 allowlist | `policy/allowlist.yaml`, `src/surfaces/web.ts` `route()` | `policy-blocked-admin-wire/` |
-| §3.6 handoff | `src/escalation/lifecycle.ts`, `src/replay/handoff.ts`, `src/escalation/operator.ts` | `escalate-human-handoff/` (`operatorKind: "human"`), `escalate-verify-and-file-dispute/` (`scripted`) |
-| §3.7 overlay / drift | `src/overlay/`, `overlays/tenants/` | `replay-tenant-westside/`, `rediscover-verify-and-file-dispute/` |
-| Typed outputs | `src/replay/outputs.ts` | `replay-lookup-success/`, `replay-output-empty-amount/` |
-| Exception classes | `src/replay/classifier.ts` | `replay-lookup-not-found/`, `replay-needs-human-expired/`, `replay-hard-failure-locator/` |
-| Idempotency / ledger | `src/replay/ledger.ts` | `runs/ledger.jsonl`, `replay-verify-dispute-already-filed/`, `replay-batch-idempotency/` |
-| Blast radius | `src/policy/runtime.ts`, `policy/runtime.yaml` | `replay-batch-cap-exceeded/`, `replay-batch-reissue-40/` |
-| Desktop surface | `src/surfaces/desktop.ts` | `npm run desktop-replay`, `tests/desktop.test.ts` |
-| Cost / soak | `src/evidence/duration.ts` | `cost-comparison.json`, `stability-50/` |
+---
 
 ## 7. Cuts
 
 Left out on purpose:
 
-- A real operator co-browse console (handoff mechanism is real; UI is a page + the live window)
-- Langfuse / CALL-E / queues (observability is JSONL + screenshots; a phone channel would be another `ResumeWaiter`)
-- Assisted LLM fallback on replay failure (would blur the “no model in production” line)
-- A second *hand-authored* capability (`open-sub-account`) so the risky-path demo does not depend on a key. `verify-and-file-dispute` is now a live OpenAI `gpt-4o` discovery.
+- **A real co-browsing operator console.** The handoff mechanism is real; the UI
+  is a page plus the live window.
+- **Queues, dashboards, hosted infrastructure.** Nothing here needs them at this
+  size, and building them would have been the wrong signal.
+- **Letting the model help during replay when a step breaks.** This is the one I
+  most wanted and deliberately didn't build. A bounded, policy-checked retry
+  would fix a real class of small breakages — and it would put a model back into
+  production, which is the exact thing this design exists to avoid. If I added
+  it, it would be a separate labelled mode, never the default, and every firing
+  would land in the ledger.
+- **Keystroke capture during a handoff.** We record before/after state and the
+  accessibility diff instead.
 
-Tenant overlays, per-tenant drift, the applicability probe, URL canonicalization, and a running desktop Surface are in. Replay-N stability (`npm run stability`) remains in the CLI. `/evidence/discovery-verify-and-file-dispute` is the impactful live OpenAI `gpt-4o` run (lookup → verify amount → file → human on Confirm). `/evidence/discovery-lookup-member-savings` is the shorter live lookup. `--scripted` remains the offline / CI path; `npm run evidence` regenerates replay and escalation traces only.
+**Known rough edges.** The exceptional-state list has duplicate codes from
+merging the vendor set with the dispute set — harmless at runtime since the first
+match wins, but visible in a file a reviewer reads. Step IDs have gaps (`s05` is
+missing) because the compiler numbers from the recorded run and some steps get
+dropped.
+
+**Next, in order:** tenant ops owning the overlay YAML rather than engineers
+re-recording; a small operator queue UI on top of the priorities that already
+exist; and output *rules* rather than just types, so a capability can declare
+"this amount must be positive".
+
+**Two bugs I found in my own tooling, which say more than the features do.**
+
+The evidence generator shared one console process across scenarios, and one
+scenario deliberately skipped its state reset — so a later run tried to file a
+dispute an earlier run had already filed, and wrote a **failure** into a folder
+this document described as a success. Evidence generation is hermetic per
+scenario now.
+
+Separately, the cost table claimed discovery took 10.7 hours and replay was
+9,018× faster. The duration was measured to the last line of the log, and the
+generator appends a hash-stamp event days later. The true figures are 16.8
+seconds and about 4× — far less impressive and actually true. There's a
+regression test against the committed log.
+
+Neither bug was in the system. Both were in how I measured it, which is the
+failure mode I was least worried about, because I'd never written a test for it.
+A write-up is a claim and a committed run is evidence, and when they disagree you
+believe the run.
+
+---
+
+## Requirement → implementation → evidence
+
+| Requirement | Code | Evidence |
+|---|---|---|
+| §3.1 goal-driven loop | `agent/discover.ts`, `providers.ts` | `discovery-verify-and-file-dispute/`, `discovery-assisted-attest/` |
+| §3.2 typed artifact | `artifact/{schema,compile,ranked,checkpoint}.ts` | `capabilities/*.json` |
+| §3.3 deterministic replay | `replay/{engine,normalize,roundtrip}.ts` | verify round-trip + determinism rows |
+| §3.3 error handling | `replay/{classifier,retry,outputs}.ts` | class table in §3 |
+| §3.4 allowlist | `policy/{routes,policy}.ts`, `surfaces/web.ts` | `safety.test.ts`, `policy-blocked-admin-wire/` |
+| §3.4 secrets & PII | `policy/{vault,redact}.ts` | redacted `result.json` files |
+| §3.5 evidence | `evidence/{store,catalog}.ts` | `evidence/index.html` |
+| §3.6 escalation | `escalation/{control,lifecycle,operator}.ts`, `replay/handoff.ts` | `escalate-human-handoff/`, `escalate-verify-and-file-dispute/` |
+| §3.7 heterogeneity | `overlay/*`, `surfaces/desktop.ts`, `replay/{probe,drift,portability}.ts` | tenant + desktop verify rows, `rediscover-verify-and-file-dispute/` |
